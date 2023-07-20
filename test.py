@@ -42,7 +42,7 @@ rviz=True
 gt=False
 
 
-model.load_state_dict(torch.load('./saved_model/29.model',map_location=device)) 
+model.load_state_dict(torch.load('./saved_model/99.model',map_location=device)) 
 
 
 body_edges = np.array(
@@ -277,64 +277,11 @@ with torch.no_grad():
             plt.ioff()
             plt.show()
             plt.close()
-        if rviz:
-            length_=45+15
-            i = 0
-            rospy.init_node('forecaster', anonymous=True)
-            human_forecast = rospy.Publisher("/mrt_forecast", MarkerArray, queue_size=1)
-        
-            while i < length_:
-                SCALE = 0.015
-                marker_array = MarkerArray()
-                for j in range(results.shape[0]):
-                    alpha=1
-                    plot_edge=True
-                    if plot_edge:
-                        for edge in body_edges:
-                            x=[pred[j,i,edge[0],0],pred[j,i,edge[1],0]]
-                            y=[pred[j,i,edge[0],1],pred[j,i,edge[1],1]]
-                            z=[pred[j,i,edge[0],2],pred[j,i,edge[1],2]]
-
-                            marker = Marker()
-                            marker.header.frame_id = "mocap"
-                            marker.header.stamp = rospy.Time.now()
-                            marker.type = marker.LINE_LIST
-                            marker.id = (j*100+edge[1])
-                            marker.scale.x = SCALE
-                            marker.action = marker.ADD
-                            marker.color.a = alpha
-                            p1m = Marker()
-                            p1m.header.frame_id = "mocap"
-                            p1m.header.stamp = rospy.Time.now()
-                            p1m.type = marker.SPHERE_LIST
-                            p1m.id = (j*100+edge[1]+50)
-                            p1m.scale.x = SCALE*2
-                            p1m.scale.y = SCALE*2
-                            p1m.scale.z = SCALE*2
-                            p1m.action = p1m.ADD
-                            p1m.color.a = alpha
-                            p1, p2 = Point(), Point()
-                            p1.x, p1.y, p1.z = z[0], x[0], y[0]
-                            p2.x, p2.y, p2.z = z[1], x[1], y[1]
-                            if i>=15:
-                                marker.color.b = 1
-                                
-                            else:
-                                marker.color.g = 1
-
-                            p1m.points = [p1, p2]
-                            marker.points = [p1, p2]
-                            marker_array.markers.append(marker)
-                            marker_array.markers.append(p1m)
-                    
-                human_forecast.publish(marker_array)
-                time.sleep(.08)
-                i += 1
                 
 
 
-    # print('avg 1 second',np.mean(loss_list1))
-    # print('avg 2 seconds',np.mean(loss_list2))
-    # print('avg 3 seconds',np.mean(loss_list3))
+    print('avg 1 second',np.mean(loss_list1))
+    print('avg 2 seconds',np.mean(loss_list2))
+    print('avg 3 seconds',np.mean(loss_list3))
     
     
