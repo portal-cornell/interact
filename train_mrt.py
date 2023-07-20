@@ -15,7 +15,7 @@ from torch.nn import init
 from data import DATA
 dataset = DATA()
 batch_size=64
-
+torch.autograd.set_detect_anomaly(True)
 dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
 from discriminator_data import D_DATA
@@ -27,10 +27,8 @@ real_motion_all=list(enumerate(real_motion_dataloader))
 device='cuda'
 
 
-
 model = Transformer(d_word_vec=128, d_model=128, d_inner=1024,
             n_layers=3, n_head=8, d_k=64, d_v=64,device=device).to(device)
-
 discriminator = Discriminator(d_word_vec=45, d_model=45, d_inner=256,
             n_layers=3, n_head=8, d_k=32, d_v=32,device=device).to(device)
 
@@ -85,12 +83,13 @@ for epoch in range(100):
         new_new_rec=dct.idct(new_new_rec_)
         
         rec=torch.cat([rec,new_rec,new_new_rec],dim=-2)
-        
-        results=output_[:,:1,:]
+        results = output_[:,:1,:]
         for i in range(1,31+15):
-            results=torch.cat([results,output_[:,:1,:]+torch.sum(rec[:,:i,:],dim=1,keepdim=True)],dim=1)
-        results=results[:,1:,:]
-      
+            results = torch.cat([results,output_[:,:1,:]+torch.sum(rec[:,:i,:],dim=1,keepdim=True)],dim=1)
+        results =results[:,1:,:]
+        # cumulative_sum = torch.cumsum(rec, dim=1)
+        # results = output_[:, :1, :] + cumulative_sum[:, :45, :]
+
         loss=torch.mean((rec[:,:,:]-(output_[:,1:46,:]-output_[:,:45,:]))**2)
         
         
@@ -111,14 +110,14 @@ for epoch in range(100):
 
             d_motion_disc_real, d_motion_disc_fake, d_motion_disc_loss = adv_disc_l2_loss(real_disc_value, fake_disc_value)
             
-            optimizer_d.zero_grad()
-            d_motion_disc_loss.backward()
-            optimizer_d.step()
-        
        
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+        if (j + 1) %2 == 0:
+            optimizer_d.zero_grad()
+            d_motion_disc_loss.backward()
+            optimizer_d.step()
  
         total_loss=total_loss+loss
 

@@ -1,6 +1,9 @@
 import torch
 import numpy as np
 import torch_dct as dct
+import rospy
+from visualization_msgs.msg import MarkerArray, Marker
+from geometry_msgs.msg import Point
 import time
 from MRT.Models import Transformer
 
@@ -15,7 +18,7 @@ import os
 
 from data import TESTDATA
 
-dataset_name='mupots'
+dataset_name='mocap'
 
 test_dataset = TESTDATA(dataset=dataset_name)
 test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=1, shuffle=False)
@@ -29,9 +32,13 @@ model = Transformer(d_word_vec=128, d_model=128, d_inner=1024,
             n_layers=3, n_head=8, d_k=64, d_v=64,device=device).to(device)
 
 
-
+body_edges = np.array(
+[[0,1], [1,2],[2,3],[0,4],
+[4,5],[5,6],[0,7],[7,8],[7,9],[9,10],[10,11],[7,12],[12,13],[13,14]]
+)
 
 plot=False
+rviz=True
 gt=False
 
 
@@ -54,7 +61,7 @@ with torch.no_grad():
     model.eval()
     loss_list=[]
     for jjj,data in enumerate(test_dataloader,0):
-        print(jjj)
+        # print(jjj)
         #if jjj!=20:
         #    continue
         input_seq,output_seq=data
@@ -191,7 +198,7 @@ with torch.no_grad():
             
             while i < length_:
                 
-                ax.lines = []
+                # ax.lines = []
 
                 for x_i in range(p_x.shape[0]):
                     temp_x=[p_x[x_i],p_x[x_i]]
@@ -270,12 +277,64 @@ with torch.no_grad():
             plt.ioff()
             plt.show()
             plt.close()
+        if rviz:
+            length_=45+15
+            i = 0
+            rospy.init_node('forecaster', anonymous=True)
+            human_forecast = rospy.Publisher("/mrt_forecast", MarkerArray, queue_size=1)
+        
+            while i < length_:
+                SCALE = 0.015
+                marker_array = MarkerArray()
+                for j in range(results.shape[0]):
+                    alpha=1
+                    plot_edge=True
+                    if plot_edge:
+                        for edge in body_edges:
+                            x=[pred[j,i,edge[0],0],pred[j,i,edge[1],0]]
+                            y=[pred[j,i,edge[0],1],pred[j,i,edge[1],1]]
+                            z=[pred[j,i,edge[0],2],pred[j,i,edge[1],2]]
 
-            
+                            marker = Marker()
+                            marker.header.frame_id = "mocap"
+                            marker.header.stamp = rospy.Time.now()
+                            marker.type = marker.LINE_LIST
+                            marker.id = (j*100+edge[1])
+                            marker.scale.x = SCALE
+                            marker.action = marker.ADD
+                            marker.color.a = alpha
+                            p1m = Marker()
+                            p1m.header.frame_id = "mocap"
+                            p1m.header.stamp = rospy.Time.now()
+                            p1m.type = marker.SPHERE_LIST
+                            p1m.id = (j*100+edge[1]+50)
+                            p1m.scale.x = SCALE*2
+                            p1m.scale.y = SCALE*2
+                            p1m.scale.z = SCALE*2
+                            p1m.action = p1m.ADD
+                            p1m.color.a = alpha
+                            p1, p2 = Point(), Point()
+                            p1.x, p1.y, p1.z = z[0], x[0], y[0]
+                            p2.x, p2.y, p2.z = z[1], x[1], y[1]
+                            if i>=15:
+                                marker.color.b = 1
+                                
+                            else:
+                                marker.color.g = 1
+
+                            p1m.points = [p1, p2]
+                            marker.points = [p1, p2]
+                            marker_array.markers.append(marker)
+                            marker_array.markers.append(p1m)
+                    
+                human_forecast.publish(marker_array)
+                time.sleep(.08)
+                i += 1
+                
 
 
-    print('avg 1 second',np.mean(loss_list1))
-    print('avg 2 seconds',np.mean(loss_list2))
-    print('avg 3 seconds',np.mean(loss_list3))
+    # print('avg 1 second',np.mean(loss_list1))
+    # print('avg 2 seconds',np.mean(loss_list2))
+    # print('avg 3 seconds',np.mean(loss_list3))
     
     

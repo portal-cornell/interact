@@ -1,0 +1,4 @@
+saved_model
+*pycache*
+all_asfamc
+*.npy

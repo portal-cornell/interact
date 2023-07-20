@@ -279,7 +279,7 @@ class Discriminator(nn.Module):
         
     
     def forward(self, x):
-        x, *_ = self.encoder(x,n_person=None, src_mask=None)
-        x=self.fc(x)
-        x=x.view(-1,1)
-        return x
+        y, *_ = self.encoder(x,n_person=None, src_mask=None)
+        y=self.fc(y)
+        y=y.view(-1,1)
+        return y
