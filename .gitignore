@@ -2,3 +2,6 @@ saved_model
 *pycache*
 all_asfamc
 *.npy
+*.csv
+*.json
+view_npy.py
