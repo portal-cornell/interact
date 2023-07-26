@@ -5,3 +5,6 @@ all_asfamc
 *.csv
 *.json
 view_npy.py
+*utils*
+*amass*
+*body_models*

@@ -19,6 +19,7 @@ def get_marker(id, pose, edge, ns = 'current', alpha=1, red=1, green=1, blue=1):
     relevant_joints=['BackTop', 'LShoulderBack', 'RShoulderBack',
                         'LElbowOut', 'RElbowOut', 'LWristOut', 'RWristOut', 'WaistLBack', 
                         'WaistRBack', 'LHandOut', 'RHandOut']
+
     SCALE = 0.015
     marker = Marker()
     marker.header.frame_id = "mocap"
@@ -52,6 +53,9 @@ def get_marker(id, pose, edge, ns = 'current', alpha=1, red=1, green=1, blue=1):
     p1.x, p1.y, p1.z = -z+0.4, -x+1.3, y+0.1
     x, y, z = pos2.tolist()
     p2.x, p2.y, p2.z = -z+0.4, -x+1.3, y+0.1
+
+    # if edge[0] == 1 and edge[1] == 2:
+    #     print(((pos1[0]-pos2[0])**2 + (pos1[1]-pos2[1])**2 + (pos1[1]-pos2[2])**2)**.5) 
     #for sideways positioned mocap
     # p1.x, p1.y, p1.z = -x-0.2, z-0.6, y+0.1
     # x, y, z = pos2.tolist()
@@ -67,7 +71,7 @@ def get_marker_array(current_joints, future_joints, forecast_joints, person = "K
     color = 1 if person == "Kushal" else 0
     marker_array = MarkerArray()
     edges = [
-            (0, 1), (0, 2),
+            (0, 1), (0, 2), (1, 2),
             (1, 3), (3, 5),
             (2, 4), (4, 6),
             (5, 9), (6, 10)
