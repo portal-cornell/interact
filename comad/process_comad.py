@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.animation as animation
 
-activity_name = 'table_set_4'
+activity_name = 'react_stir_2'
 
 csv_name = f'./comad/{activity_name}/{activity_name}.csv'
 df = pd.read_csv(csv_name, header=None,skiprows=2, low_memory=False)
@@ -109,6 +109,35 @@ table_set4_ep = [
 
 table_set4_offset = 1
 
+react_stir1_ep = [
+    ("0:30", "1:06"),
+    ("2:21", "3:01"),
+    ("3:30", "4:01"),
+    ("4:29", "4:57"),
+    ("5:28", "6:05"),
+    ("7:27", "7:56"),
+    ("8:22", "8:52"),
+    ("9:37", "10:03"),
+]
+
+react_stir1_offset = 1
+
+react_stir2_ep = [
+    ("0:12", "0:37"),
+    ("1:02", "1:28"),
+    ("1:48", "2:15"),
+    ("2:48", "3:14"),
+    ("3:58", "4:20"),
+    ("4:36", "4:59"),
+    ("5:23", "5:49"),
+    ("6:13", "6:39"),
+    ("7:07", "7:30"),
+    ("7:54", "8:14"),
+    ("8:31", "9:00"),
+]
+
+react_stir2_offset = 1
+
 def convert_time_to_frame(time, hz, offset):
     mins = int(time[:time.find(':')])
     secs = int(time[time.find(':')+1:])
@@ -117,9 +146,9 @@ def convert_time_to_frame(time, hz, offset):
 clips = []
 atiksh_arr_fin = []
 kushal_arr_fin = []
-for start, end in table_set4_ep:
-    start_frame = convert_time_to_frame(start, 120, table_set4_offset)
-    end_frame = convert_time_to_frame(end, 120, table_set4_offset) #+ 240  The +240 frames here is essentially adding 2 extra seconds to the episode
+for start, end in react_stir2_ep:
+    start_frame = convert_time_to_frame(start, 120, react_stir2_offset)
+    end_frame = convert_time_to_frame(end, 120, react_stir2_offset) #+ 240  The +240 frames here is essentially adding 2 extra seconds to the episode
 
     atiksh_arr = np.nan_to_num(frames[start_frame:end_frame, :25, :]).tolist()
     atiksh_arr_fin.append(atiksh_arr)
@@ -128,13 +157,13 @@ for start, end in table_set4_ep:
     current_clip = {"Atiksh":atiksh_arr, "Kushal":kushal_arr}
     clips.append(current_clip)
 
-data = []
-for i in range(len(atiksh_arr_fin)):
-    for j in range(len(atiksh_arr_fin[i])):
-        interim = [atiksh_arr_fin[i][j], kushal_arr_fin[i][j]]
-        data.append(interim)
+# data = []
+# for i in range(len(atiksh_arr_fin)):
+#     for j in range(len(atiksh_arr_fin[i])):
+#         interim = [atiksh_arr_fin[i][j], kushal_arr_fin[i][j]]
+#         data.append(interim)
 
-np.save(f"./comad/{activity_name}/{activity_name}_train.npy", np.array(data))
+# np.save(f"./comad/{activity_name}/{activity_name}_train.npy", np.array(data))
 import json
 for idx in range(len(clips)):
     with open(f'./comad/{activity_name}/{activity_name}_{idx}.json', 'w') as f:
