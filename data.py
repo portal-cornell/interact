@@ -55,7 +55,7 @@ class TESTDATA(data.Dataset):
         self.len=len(self.data)
 
     def __getitem__(self, index):
-
+        #split into robot/human data
         input_seq=self.data[index][:,:30,:][:,::2,:]#input, 30 fps to 15 fps
         output_seq=self.data[index][:,30:,:][:,::2,:]#output, 30 fps to 15 fps
         last_input=input_seq[:,-1:,:]
