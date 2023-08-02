@@ -67,14 +67,17 @@ class TESTDATA(data.Dataset):
         return self.len
 
 
-default_splits = [['./comad/table_set_1/', './comad/table_set_2']
+hh_splits = [['./comad/table_set_1/', './comad/table_set_2']
                   ['./comad/table_set_3/', './comad/table_set_4']]
+hr_splits = [[]]
 default_names = ["Atiksh", "Kushal"]
+hr_names = ["Robot", "Kushal"]
+data_types = ["Human-Human", "Human-Robot"]
 
 class COMADDATA(data.Dataset):
-    def __init__(self,data_dir,input_n,output_n,sample_rate, split=0, mocap_splits=default_splits, names=default_names):
+    def __init__(self,data_dir,input_n,output_n,sample_rate, split=0, names=default_names, data_type=0):
             """
-            data_dir := './mocap_data'
+            data_dir := './comad'
             mapping_file := './mapping.json'
             """
             self.data_dir = data_dir
@@ -90,28 +93,59 @@ class COMADDATA(data.Dataset):
                         'WaistRBack', 'LHandOut', 'RHandOut']
             mapping = read_json('./mapping.json')
             joint_used = np.array([mapping[joint_name] for joint_name in joint_names])
-            
+            mocap_splits = []
+            if data_type == 0:
+                mocap_splits = hh_splits
+            else:
+                mocap_splits = hr_splits
 
+            #ignore atiksh's jsons when loading hr-data
             ignore_data = {
                 "Atiksh":[],
-                "Kushal":[]
+                "Kushal":[],
+                "Robot":[]
             }
-
-            missing_cnt = 0
-            for ds in mocap_splits[split]:
-                print(f'>>> loading {ds}')
-                for episode in os.listdir(self.data_dir + '/' + ds):
-                    print(f'Episode: {self.data_dir}/{ds}/{episode}')
-                    json_data = read_json(f'{self.data_dir}/{ds}/{episode}')
-                    for robot_name in names:
-                        human_name = [name for name in names if name != robot_name][0]
+            if data_types[data_type] == "Human-Human":
+                missing_cnt = 0
+                for ds in mocap_splits[split]:
+                    print(f'>>> loading {ds}')
+                    for episode in os.listdir(self.data_dir + '/' + ds):
+                        print(f'Episode: {self.data_dir}/{ds}/{episode}')
+                        json_data = read_json(f'{self.data_dir}/{ds}/{episode}')
+                        for robot_name in names:
+                            human_name = [name for name in names if name != robot_name][0]
+                            if episode in ignore_data[robot_name]:
+                                print('Ignoring for ' + robot_name)
+                                continue
+                            robot = get_pose_history(json_data, robot_name)
+                            human = get_pose_history(json_data, human_name)
+                            robot_frames = self.get_downsampled_frames(robot, 120)
+                            human_frames = self.get_downsampled_frames(human, 120)
+                            for start_frame in range(robot_frames.shape[0]-sequence_len):
+                                end_frame = start_frame + sequence_len
+                                if missing_data(robot_frames[start_frame:end_frame, joint_used, :]) or\
+                                missing_data(human_frames[start_frame+input_n:end_frame, joint_used, :]):
+                                    missing_cnt += 1
+                                    continue
+                                self.robot_lst.append(robot_frames[start_frame:end_frame, :, :])
+                                self.human_lst.append(human_frames[start_frame+input_n:end_frame, :, :])
+            else:
+                missing_cnt = 0
+                names = hr_names
+                for ds in mocap_splits[split]:
+                    print(f'>>> loading {ds}')
+                    for episode in os.listdir(self.data_dir + '/' + ds):
+                        print(f'Episode: {self.data_dir}/{ds}/{episode}')
+                        json_data = read_json(f'{self.data_dir}/{ds}/{episode}')
+                        robot_name = names[0]
+                        human_name = names[1]
                         if episode in ignore_data[robot_name]:
                             print('Ignoring for ' + robot_name)
                             continue
                         robot = get_pose_history(json_data, robot_name)
                         human = get_pose_history(json_data, human_name)
-                        robot_frames = self.get_downsampled_frames(robot)
-                        human_frames = self.get_downsampled_frames(human)
+                        robot_frames = self.get_downsampled_frames(robot, 19)
+                        human_frames = self.get_downsampled_frames(human, 19)
                         for start_frame in range(robot_frames.shape[0]-sequence_len):
                             end_frame = start_frame + sequence_len
                             if missing_data(robot_frames[start_frame:end_frame, joint_used, :]) or\
@@ -125,9 +159,9 @@ class COMADDATA(data.Dataset):
             print(len(self.robot_lst))
             print(f'Missing: {missing_cnt}')
 
-    def get_downsampled_frames(self, tensor):
+    def get_downsampled_frames(self, tensor, orig_framerate):
             orig_frames = tensor.shape[0]
-            downsampled_frames = int(round((orig_frames/120)*self.sample_rate))
+            downsampled_frames = int(round((orig_frames/orig_framerate)*self.sample_rate))
             sample_idxs = np.linspace(0, orig_frames-1, downsampled_frames)
             select_frames = np.round(sample_idxs).astype(int)
             skipped_frames = tensor[select_frames]
@@ -139,6 +173,7 @@ class COMADDATA(data.Dataset):
     def __getitem__(self, idx):
         # each element of the data list is of shape (sequence length, 25 joints, 3d)
         return self.robot_lst[idx], self.human_lst[idx] #what format needed for data loading
+    
     
 class AMASSDATA(data.Dataset):
     def __init__(self,data_dir,input_n,output_n,skip_rate, actions=None, split=0):
