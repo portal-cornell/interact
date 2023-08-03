@@ -116,7 +116,7 @@ class Decoder(nn.Module):
         dec_slf_attn_list, dec_enc_attn_list = [], []
 
         dec_output = (trg_seq)
-
+        # import pdb;pdb.set_trace()
         for dec_layer in self.layer_stack:
             dec_output, dec_slf_attn, dec_enc_attn = dec_layer(
                 dec_output, enc_output, slf_attn_mask=trg_mask, dec_enc_attn_mask=src_mask)
@@ -215,8 +215,9 @@ class Transformer(nn.Module):
         n_person=input_seq.shape[1]
 
         #src_mask = (torch.ones([src_seq.shape[0],1,src_seq.shape[1]])==True).to(self.device)
-        
+        # import pdb; pdb.set_trace()
         src_seq_=self.proj(src_seq)
+        # import pdb; pdb.set_trace()
         trg_seq_=self.proj2(trg_seq)
 
         enc_output, *_ = self.encoder(src_seq_, n_person, None)
@@ -241,14 +242,17 @@ class Transformer(nn.Module):
 
         temp_a=input_seq.unsqueeze(1).repeat(1,input_seq.shape[1],1,1,1)
         temp_b=input_seq[:,:,-1:,:].unsqueeze(2).repeat(1,1,input_seq.shape[1],1,1)
+        
         c=torch.mean((temp_a-temp_b)**2,dim=-1)
+        
         c=c.reshape(c.shape[0]*c.shape[1],c.shape[2]*c.shape[3],1)
-
+        # import pdb; pdb.set_trace()
         
         enc_output=torch.cat([enc_output,enc_others+torch.exp(-c)],dim=1)
         dec_output, dec_attention,*_ = self.decoder(trg_seq_[:,:1,:], None, enc_output, mask_dec)
         
 
+        # import pdb; pdb.set_trace()
         dec_output= self.l1(dec_output)
         dec_output= self.l2(dec_output)
         dec_output=dec_output.view(dec_output.shape[0],15,self.d_model)

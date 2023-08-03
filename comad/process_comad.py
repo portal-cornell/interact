@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.animation as animation
 
-activity_name = 'react_stir_2'
+activity_name = 'table_set_2'
 
 csv_name = f'./comad/{activity_name}/{activity_name}.csv'
 df = pd.read_csv(csv_name, header=None,skiprows=2, low_memory=False)
@@ -146,9 +146,9 @@ def convert_time_to_frame(time, hz, offset):
 clips = []
 atiksh_arr_fin = []
 kushal_arr_fin = []
-for start, end in react_stir2_ep:
-    start_frame = convert_time_to_frame(start, 120, react_stir2_offset)
-    end_frame = convert_time_to_frame(end, 120, react_stir2_offset) #+ 240  The +240 frames here is essentially adding 2 extra seconds to the episode
+for start, end in table_set2_ep:
+    start_frame = convert_time_to_frame(start, 120, table_set2_offset)
+    end_frame = convert_time_to_frame(end, 120, table_set2_offset) + 240  #The +240 frames here is essentially adding 2 extra seconds to the episode
 
     atiksh_arr = np.nan_to_num(frames[start_frame:end_frame, :25, :]).tolist()
     atiksh_arr_fin.append(atiksh_arr)

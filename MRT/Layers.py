@@ -36,8 +36,9 @@ class DecoderLayer(nn.Module):
             slf_attn_mask=None, dec_enc_attn_mask=None):
         #dec_output, dec_slf_attn = self.slf_attn(
         #    dec_input, dec_input, dec_input, mask=slf_attn_mask)
+        # import pdb; pdb.set_trace()
         dec_output, dec_enc_attn = self.enc_attn(
-            dec_input, enc_output, enc_output, mask=dec_enc_attn_mask)
+            dec_input, enc_output, enc_output, mask=dec_enc_attn_mask, check=True)
         dec_output = self.pos_ffn(dec_output)
         return dec_output, None, dec_enc_attn#dec_slf_attn, dec_enc_attn
 

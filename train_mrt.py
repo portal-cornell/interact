@@ -54,7 +54,7 @@ for epoch in range(100):
         input_seq,output_seq=data
         input_seq=torch.tensor(input_seq,dtype=torch.float32).to(device) # batch, N_person, 15 (15 fps 1 second), 45 (15joints xyz) 
         output_seq=torch.tensor(output_seq,dtype=torch.float32).to(device) # batch, N_persons, 46 (last frame of input + future 3 seconds), 45 (15joints xyz) 
-        
+
         # first 1 second predict future 1 second
         input_=input_seq.view(-1,15,input_seq.shape[-1]) # batch x n_person ,15: 15 fps, 1 second, 45: 15joints x 3
         

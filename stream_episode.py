@@ -71,7 +71,7 @@ def get_marker_array(current_joints, future_joints, forecast_joints, person = "K
     color = 1 if person == "Kushal" else 0
     marker_array = MarkerArray()
     edges = [
-            (0, 1), (0, 2), (1, 2),
+            (0, 1), (0, 2),
             (1, 3), (3, 5),
             (2, 4), (4, 6),
             (5, 9), (6, 10)
@@ -96,52 +96,54 @@ if __name__ == '__main__':
     human_A_forecast = rospy.Publisher("/human_forecast", MarkerArray, queue_size=1)
     human_B_forecast = rospy.Publisher("/human_forecast1", MarkerArray, queue_size=1)
 
+    for i in range(10):
+        input()
+        print("INDEX ===== ", i)
+        episode_file = f"./comad/handover2_data/handover2_{i}.json"
+        mapping_file = "mapping.json"
+        with open(episode_file, 'r') as f:
+            data = json.load(f)
+        with open(mapping_file, 'r') as f:
+            mapping = json.load(f)
+        
+        pause = False
+        def on_press(key):
+            if key == keyboard.Key.space:
+                pause = True
+                return False
 
-    episode_file = "./comad/table_set_1/table_set_1_0.json"
-    mapping_file = "mapping.json"
-    with open(episode_file, 'r') as f:
-        data = json.load(f)
-    with open(mapping_file, 'r') as f:
-        mapping = json.load(f)
-    
-    pause = False
-    def on_press(key):
-        if key == keyboard.Key.space:
-            pause = True
-            return False
+        listener = keyboard.Listener(on_press=on_press)
+        listener.start()
 
-    listener = keyboard.Listener(on_press=on_press)
-    listener.start()
+        rate = rospy.Rate(600)
 
-    rate = rospy.Rate(120)
-
-    person_data = {}
-    for stream_person in data:
-        person_data[stream_person] = np.array(data[stream_person])
-    for i in range(100):
-        for timestep in range(120, 2520, 1):
-            print(round((timestep-0)/120, 1))
-            if not pause and listener.running:
-                joint_data_A = person_data["Atiksh"]
-                joint_data_B = person_data["Kushal"]
-                current_joints_A = get_relevant_joints(joint_data_A[timestep])
-                current_joints_B = get_relevant_joints(joint_data_B[timestep])
-                marker_array_A = get_marker_array(current_joints=current_joints_A, 
-                                                future_joints=None,
-                                                forecast_joints=None,
-                                                person="Atiksh")
-                marker_array_B = get_marker_array(current_joints=current_joints_B, 
-                                future_joints=None,
-                                forecast_joints=None,
-                                person="Kushal")
-                                
-                human_A_forecast.publish(marker_array_A)
-                human_B_forecast.publish(marker_array_B)
-                rate.sleep()
-            else:
-                input("Press enter to continue")
-                pause = False
-                listener = keyboard.Listener(on_press=on_press)
-                listener.start()
-        break
+        person_data = {}
+        for stream_person in data:
+            person_data[stream_person] = np.array(data[stream_person])
+        for i in range(100):
+            for timestep in range(len(data[list(data.keys())[0]])):
+                # print(round(timestep/120, 1))
+                if not pause and listener.running:
+                    joint_data_A = person_data["Atiksh"]
+                    joint_data_B = person_data["Kushal"]
+                    current_joints_A = get_relevant_joints(joint_data_A[timestep])
+                    current_joints_B = get_relevant_joints(joint_data_B[timestep])
+                    marker_array_A = get_marker_array(current_joints=current_joints_A, 
+                                                    future_joints=None,
+                                                    forecast_joints=None,
+                                                    person="Atiksh")
+                    marker_array_B = get_marker_array(current_joints=current_joints_B, 
+                                    future_joints=None,
+                                    forecast_joints=None,
+                                    person="Kushal")
+                                    
+                    human_A_forecast.publish(marker_array_A)
+                    human_B_forecast.publish(marker_array_B)
+                    rate.sleep()
+                else:
+                    input("Press enter to continue")
+                    pause = False
+                    listener = keyboard.Listener(on_press=on_press)
+                    listener.start()
+            break
 

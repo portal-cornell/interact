@@ -26,8 +26,9 @@ class MultiHeadAttention(nn.Module):
         self.layer_norm = nn.LayerNorm(d_model, eps=1e-6)
 
 
-    def forward(self, q, k, v, mask=None):
+    def forward(self, q, k, v, mask=None, check=False):
 
+        
         d_k, d_v, n_head = self.d_k, self.d_v, self.n_head
         sz_b, len_q, len_k, len_v = q.size(0), q.size(1), k.size(1), v.size(1)
 
@@ -39,14 +40,18 @@ class MultiHeadAttention(nn.Module):
         k = self.w_ks(k).view(sz_b, len_k, n_head, d_k)
         v = self.w_vs(v).view(sz_b, len_v, n_head, d_v)
 
+        
         # Transpose for attention dot product: b x n x lq x dv
         q, k, v = q.transpose(1, 2), k.transpose(1, 2), v.transpose(1, 2)
+
+        
 
         if mask is not None:
             mask = mask.unsqueeze(1)   # For head axis broadcasting.
 
-        q, attn = self.attention(q, k, v, mask=mask)
-        
+        q, attn = self.attention(q, k, v, mask=mask, check=check)
+        # if check:
+        #     import pdb; pdb.set_trace()
         # Transpose to move the head dimension back: b x lq x n x dv
         # Combine the last two dimensions to concatenate all the heads together: b x lq x (n*dv)
         q = q.transpose(1, 2).contiguous().view(sz_b, len_q, -1)

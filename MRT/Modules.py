@@ -10,8 +10,9 @@ class ScaledDotProductAttention(nn.Module):
         self.temperature = temperature
         self.dropout = nn.Dropout(attn_dropout)
 
-    def forward(self, q, k, v, mask=None):
-
+    def forward(self, q, k, v, mask=None, check=False):
+        # if check:
+        #     import pdb; pdb.set_trace()
         attn = torch.matmul(q / self.temperature, k.transpose(2, 3))
 
         if mask is not None:
