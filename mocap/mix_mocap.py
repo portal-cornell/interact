@@ -34,16 +34,16 @@ for i in range(6000):
         data.append(temp)
 
     #3000 sequences have 3 single subject
-    else:
-        one_person_1=one_train[one_1[i-3000]]
-        one_person_2=one_train[one_2[i-3000]]
-        one_person_1[:,:,:,[0,2]]=one_person_1[:,:,:,[0,2]]+np.array([np.random.randint(-50,50),np.random.randint(-50,50)])
-        one_person_2[:,:,:,[0,2]]=one_person_2[:,:,:,[0,2]]+np.array([np.random.randint(-50,50),np.random.randint(-50,50)])
-        temp=np.concatenate([one_person_1,one_person_2]) 
-        temp[:,:,:,0]=temp[:,:,:,0]-np.mean(temp[:,:,:,0])
-        temp[:,:,:,2]=temp[:,:,:,2]-np.mean(temp[:,:,:,2]) 
-        temp=temp.reshape(2,120,-1)
-        data.append(temp)
+    # else:
+    #     one_person_1=one_train[one_1[i-3000]]
+    #     one_person_2=one_train[one_2[i-3000]]
+    #     one_person_1[:,:,:,[0,2]]=one_person_1[:,:,:,[0,2]]+np.array([np.random.randint(-50,50),np.random.randint(-50,50)])
+    #     one_person_2[:,:,:,[0,2]]=one_person_2[:,:,:,[0,2]]+np.array([np.random.randint(-50,50),np.random.randint(-50,50)])
+    #     temp=np.concatenate([one_person_1,one_person_2]) 
+    #     temp[:,:,:,0]=temp[:,:,:,0]-np.mean(temp[:,:,:,0])
+    #     temp[:,:,:,2]=temp[:,:,:,2]-np.mean(temp[:,:,:,2]) 
+    #     temp=temp.reshape(2,120,-1)
+    #     data.append(temp)
 
 data=np.array(data) # 6000 sequences, 3 persons, 120 (30 fps 4 seconds), 93 joints xyz (31x3)
 print(data.shape)
@@ -91,16 +91,16 @@ for i in range(800):
         data.append(temp)
 
 
-    else:
-        one_person_1=one_test[one_1[i-400]]
-        one_person_2=one_test[one_2[i-400]]
-        one_person_1[:,:,:,[0,2]]=one_person_1[:,:,:,[0,2]]+np.array([np.random.randint(-50,50),np.random.randint(-50,50)])
-        one_person_2[:,:,:,[0,2]]=one_person_2[:,:,:,[0,2]]+np.array([np.random.randint(-50,50),np.random.randint(-50,50)])
-        temp=np.concatenate([one_person_1,one_person_2]) 
-        temp[:,:,:,0]=temp[:,:,:,0]-np.mean(temp[:,:,:,0])
-        temp[:,:,:,2]=temp[:,:,:,2]-np.mean(temp[:,:,:,2]) 
-        temp=temp.reshape(2,120,-1)
-        data.append(temp)
+    # else:
+    #     one_person_1=one_test[one_1[i-400]]
+    #     one_person_2=one_test[one_2[i-400]]
+    #     one_person_1[:,:,:,[0,2]]=one_person_1[:,:,:,[0,2]]+np.array([np.random.randint(-50,50),np.random.randint(-50,50)])
+    #     one_person_2[:,:,:,[0,2]]=one_person_2[:,:,:,[0,2]]+np.array([np.random.randint(-50,50),np.random.randint(-50,50)])
+    #     temp=np.concatenate([one_person_1,one_person_2]) 
+    #     temp[:,:,:,0]=temp[:,:,:,0]-np.mean(temp[:,:,:,0])
+    #     temp[:,:,:,2]=temp[:,:,:,2]-np.mean(temp[:,:,:,2]) 
+    #     temp=temp.reshape(2,120,-1)
+    #     data.append(temp)
 
 data=np.array(data)
 

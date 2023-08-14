@@ -153,68 +153,68 @@ np.save('two_test_4seconds_2.npy',np.array(test_data))
 
 #one subject data
 
-data=[]
-test_data=[]
-for ii in sorted(os.listdir('./all_asfamc/subjects/')):
+# data=[]
+# test_data=[]
+# for ii in sorted(os.listdir('./all_asfamc/subjects/')):
     
-    motion_list_A_All=[]
-    motion_list_A_test=[]
-    asf_path = './all_asfamc/subjects/'+ii+'/'+ii+'.asf'
-    iii=0
-    for each in sorted(os.listdir('./all_asfamc/subjects/'+ii+'/')):
-        if each[-3:]!='amc':
-            continue
-        amc_path = './all_asfamc/subjects/'+ii+'/'+each
-        joints = parse_asf(asf_path)
-        motions = parse_amc(amc_path)
-        length=len(motions)
-        if iii%4!=1:
-            print('train')
-            motion_list_A=[]
-            for i in range(0,length,4):
-                frame_idx = i
-                joints['root'].set_motion(motions[frame_idx])
-                joints_list=[]
-                for joint in joints.values():
-                    xyz=np.array([joint.coordinate[0],\
-                        joint.coordinate[1],joint.coordinate[2]]).squeeze(1)
-                    joints_list.append(xyz)
-                motion_list_A.append(np.array(joints_list))
-            motion_list_A_All.append(motion_list_A)
-        else:
-            print('test')
-            motion_list_A=[]
-            for i in range(0,length,4):
-                frame_idx = i
-                joints['root'].set_motion(motions[frame_idx])
-                joints_list=[]
-                for joint in joints.values():
-                    xyz=np.array([joint.coordinate[0],\
-                        joint.coordinate[1],joint.coordinate[2]]).squeeze(1)
-                    joints_list.append(xyz)
-                motion_list_A.append(np.array(joints_list))
-            motion_list_A_test.append(motion_list_A)
-        iii=iii+1
-    scene_length=len(motion_list_A_All)
-    for i in range(scene_length):
-        motion_list_A=np.array(motion_list_A_All[i]) 
-        for j in range(0,motion_list_A.shape[0],30): #down sample
-            if (j+120)>motion_list_A.shape[0]:
-                break
-            A=np.expand_dims(np.array(motion_list_A[j:j+120]),0)            
-            data.append(A)
+#     motion_list_A_All=[]
+#     motion_list_A_test=[]
+#     asf_path = './all_asfamc/subjects/'+ii+'/'+ii+'.asf'
+#     iii=0
+#     for each in sorted(os.listdir('./all_asfamc/subjects/'+ii+'/')):
+#         if each[-3:]!='amc':
+#             continue
+#         amc_path = './all_asfamc/subjects/'+ii+'/'+each
+#         joints = parse_asf(asf_path)
+#         motions = parse_amc(amc_path)
+#         length=len(motions)
+#         if iii%4!=1:
+#             print('train')
+#             motion_list_A=[]
+#             for i in range(0,length,4):
+#                 frame_idx = i
+#                 joints['root'].set_motion(motions[frame_idx])
+#                 joints_list=[]
+#                 for joint in joints.values():
+#                     xyz=np.array([joint.coordinate[0],\
+#                         joint.coordinate[1],joint.coordinate[2]]).squeeze(1)
+#                     joints_list.append(xyz)
+#                 motion_list_A.append(np.array(joints_list))
+#             motion_list_A_All.append(motion_list_A)
+#         else:
+#             print('test')
+#             motion_list_A=[]
+#             for i in range(0,length,4):
+#                 frame_idx = i
+#                 joints['root'].set_motion(motions[frame_idx])
+#                 joints_list=[]
+#                 for joint in joints.values():
+#                     xyz=np.array([joint.coordinate[0],\
+#                         joint.coordinate[1],joint.coordinate[2]]).squeeze(1)
+#                     joints_list.append(xyz)
+#                 motion_list_A.append(np.array(joints_list))
+#             motion_list_A_test.append(motion_list_A)
+#         iii=iii+1
+#     scene_length=len(motion_list_A_All)
+#     for i in range(scene_length):
+#         motion_list_A=np.array(motion_list_A_All[i]) 
+#         for j in range(0,motion_list_A.shape[0],30): #down sample
+#             if (j+120)>motion_list_A.shape[0]:
+#                 break
+#             A=np.expand_dims(np.array(motion_list_A[j:j+120]),0)            
+#             data.append(A)
     
-    scene_length=len(motion_list_A_test)
-    for i in range(scene_length):
-        motion_list_A=np.array(motion_list_A_test[i])
-        for j in range(0,motion_list_A.shape[0],30):
-            if (j+120)>motion_list_A.shape[0]:
-                break
-            A=np.expand_dims(np.array(motion_list_A[j:j+120]),0)            
-            test_data.append(A)
-    print(ii)
-np.save('one_train_4seconds_30.npy',np.array(data))
-np.save('one_test_4seconds_30.npy',np.array(test_data))
+#     scene_length=len(motion_list_A_test)
+#     for i in range(scene_length):
+#         motion_list_A=np.array(motion_list_A_test[i])
+#         for j in range(0,motion_list_A.shape[0],30):
+#             if (j+120)>motion_list_A.shape[0]:
+#                 break
+#             A=np.expand_dims(np.array(motion_list_A[j:j+120]),0)            
+#             test_data.append(A)
+#     print(ii)
+# np.save('one_train_4seconds_30.npy',np.array(data))
+# np.save('one_test_4seconds_30.npy',np.array(test_data))
 
 
 #use mix_mocap.py to mix two subjects and one subject
