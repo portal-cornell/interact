@@ -1,10 +1,17 @@
 import torch.utils.data as data
 import torch
 import numpy as np
-from utils.read_json_data import read_json, get_pose_history, missing_data
-from utils.ang2joint import *
+
+import sys
+
+sys.path.insert(0, '/home/atiksh/CHARM/utils')
+
+
+from read_json_data import read_json, get_pose_history, missing_data
+from ang2joint import *
 import networkx as nx
 import os
+
 
 class DATA(data.Dataset):
     def __init__(self):
@@ -26,6 +33,14 @@ class DATA(data.Dataset):
         output_seq=self.data[index][:,30:,:][:,::2,:]#output, 30 fps to 15 fps
         last_input=input_seq[:,-1:,:]
         output_seq=np.concatenate([last_input,output_seq],axis=1)
+
+        human_input = input_seq[0,:,:]
+        human_output = output_seq[0,:,:]
+        
+        robot_input = input_seq[1,:,:]
+        robot_ouput = output_seq[1,:,:]
+
+
 
         return input_seq,output_seq
         
@@ -67,7 +82,7 @@ class TESTDATA(data.Dataset):
         return self.len
 
 
-hh_splits = [['./comad/table_set_1/', './comad/table_set_2']
+hh_splits = [['./comad/table_set_1/', './comad/table_set_2'],
                   ['./comad/table_set_3/', './comad/table_set_4']]
 hr_splits = [[]]
 default_names = ["Atiksh", "Kushal"]
@@ -191,9 +206,12 @@ class AMASSDATA(data.Dataset):
         self.in_n = input_n
         self.out_n = output_n
         # self.sample_rate = opt.sample_rate
-        self.p3d = []
-        self.keys = []
-        self.data_idx = []
+        self.p3d_human = []
+        self.p3d_robot = []
+        self.keys_human = []
+        self.keys_robot = []
+        self.data_idx_human = []
+        self.data_idx_robot = []
         self.joint_used = np.arange(4, 22) # start from 4 for 17 joints, removing the non moving ones
         seq_len = self.in_n + self.out_n
         # mine below
@@ -202,15 +220,16 @@ class AMASSDATA(data.Dataset):
             ['SFU'],
             ['BioMotionLab_NTroje'],
         ]
-        print(amass_splits[split])
+
 
         # original splits below
-        amass_splits = [
-            ['CMU', 'MPI_Limits', 'Eyes_Japan_Dataset', 'KIT', 'EKUT', 'ACCAD'],
-            ['SFU',],
-            ['BioMotionLab_NTroje'],
-        ]
-
+        # amass_splits = [
+        #     ['CMU', 'MPI_Limits', 'Eyes_Japan_Dataset', 'KIT', 'EKUT', 'ACCAD'],
+        #     ['SFU',],
+        #     ['BioMotionLab_NTroje'],
+        # ]
+        amass_splits = [['CMU'],['ACCAD']]
+        print(amass_splits[split])
         # amass_splits = [
         #     ['SFU'],
         #     ['SFU',],
@@ -264,6 +283,7 @@ class AMASSDATA(data.Dataset):
         # # print the list
         # print(dir_list)
         for ds in amass_splits[split]:
+            print("here")
             if not os.path.isdir(self.path_to_data + ds + '/'):
                 print(self.path_to_data + ds + '/')
                 print(ds)
@@ -272,54 +292,88 @@ class AMASSDATA(data.Dataset):
             for sub in os.listdir(self.path_to_data + ds):
                 if not os.path.isdir(self.path_to_data + ds + '/' + sub):
                     continue
+                acts = []
                 for act in os.listdir(self.path_to_data + ds + '/' + sub):
-                    if not act.endswith('.npz'):
+                    acts.append(act)
+                    if not act.endswith('.npz') or len(acts) != 2:
                         continue
                     # if not ('walk' in act or 'jog' in act or 'run' in act or 'treadmill' in act):
                     #     continue
-                    pose_all = np.load(self.path_to_data + ds + '/' + sub + '/' + act)
-                    try:
-                        poses = pose_all['poses']
-                    except:
-                        print('no poses at {}_{}_{}'.format(ds, sub, act))
-                        continue
-                    frame_rate = pose_all['mocap_framerate']
-                    # gender = pose_all['gender']
-                    # dmpls = pose_all['dmpls']
-                    # betas = pose_all['betas']
-                    # trans = pose_all['trans']
-                    fn = poses.shape[0]
-                    sample_rate = int(frame_rate // 25)
-                    fidxs = range(0, fn, sample_rate)
-                    fn = len(fidxs)
-                    poses = poses[fidxs]
-                    poses = torch.from_numpy(poses).float()
-                    poses = poses.reshape([fn, -1, 3])
-                    # remove global rotation
-                    poses[:, 0] = 0
-                    p3d0_tmp = p3d0.repeat([fn, 1, 1])
-                    p3d = ang2joint(p3d0_tmp, poses, parent)
-                    # self.p3d[(ds, sub, act)] https://amass.is.tue.mpg.de/download.php= p3d.cpu().data.numpy()
-                    self.p3d.append(p3d.cpu().data.numpy())
-                    if split == 2:
-                        valid_frames = np.arange(0, fn - seq_len + 1, skip_rate)
-                    else:
-                        valid_frames = np.arange(0, fn - seq_len + 1, skip_rate)
+                    for i in range(2):
+                        human = ""
+                        robot = ""
+                        if i == 0:
+                            human = acts[0]
+                            robot = acts[1]
+                        else:
+                            human = acts[1]
+                            robot = acts[0]
+                        human_pose_all = np.load(self.path_to_data + ds + '/' + sub + '/' + human)
+                        robot_pose_all = np.load(self.path_to_data + ds + '/' + sub + '/' + robot)
+                        try:
+                            human_poses = human_pose_all['poses']
+                            robot_poses =robot_pose_all['poses']
+                        except:
+                            print('no poses at {}_{}_{}'.format(ds, sub, act))
+                            continue
+                        human_frame_rate = human_pose_all['mocap_framerate']
+                        robot_frame_rate = robot_pose_all['mocap_framerate']
+                        # gender = pose_all['gender']
+                        # dmpls = pose_all['dmpls']
+                        # betas = pose_all['betas']
+                        # trans = pose_all['trans']
+                        human_fn = human_poses.shape[0]
+                        robot_fn = robot_poses.shape[0]
+                        human_sample_rate = int(human_frame_rate // 25)
+                        robot_sample_rate = int(robot_frame_rate // 25)
+                        human_fidxs = range(0, human_fn, human_sample_rate)
+                        robot_fidxs = range(0, robot_fn, robot_sample_rate)
 
-                    # tmp_data_idx_1 = [(ds, sub, act)] * len(valid_frames)
-                    self.keys.append((ds, sub, act))
-                    tmp_data_idx_1 = [n] * len(valid_frames)
-                    tmp_data_idx_2 = list(valid_frames)
-                    self.data_idx.extend(zip(tmp_data_idx_1, tmp_data_idx_2))
+
+                        human_fn = len(human_fidxs)
+                        human_poses = human_poses[human_fidxs]
+                        human_poses = torch.from_numpy(human_poses).float()
+                        human_poses = human_poses.reshape([human_fn, -1, 3])
+
+
+                        robot_fn = len(robot_fidxs)
+                        robot_poses = robot_poses[robot_fidxs]
+                        robot_poses = torch.from_numpy(robot_poses).float()
+                        robot_poses = robot_poses.reshape([robot_fn, -1, 3])
+                        # remove global rotation
+                        human_poses[:, 0] = 0
+                        p3d0_tmp = p3d0.repeat([human_fn, 1, 1])
+                        p3d_human = ang2joint(p3d0_tmp, human_poses, parent)
+                        p3d0_tmp = p3d0.repeat([robot_fn, 1, 1])
+                        p3d_robot = ang2joint(p3d0_tmp, robot_poses, parent)
+                        # self.p3d[(ds, sub, act)] https://amass.is.tue.mpg.de/download.php= p3d.cpu().data.numpy()
+                        self.p3d_human.append(p3d_human.cpu().data.numpy())
+                        self.p3d_robot.append(p3d_robot.cpu().data.numpy())
+                        if split == 2:
+                            human_valid_frames = np.arange(0, human_fn - seq_len + 1, skip_rate)
+                            robot_valid_frames = np.arange(0, robot_fn - seq_len + 1, skip_rate)
+                        else:
+                            human_valid_frames = np.arange(0, human_fn - seq_len + 1, skip_rate)
+                            robot_valid_frames = np.arange(0, robot_fn - seq_len + 1, skip_rate)
+                        # tmp_data_idx_1 = [(ds, sub, act)] * len(valid_frames)
+                        self.keys_human.append((ds, sub, human))
+                        self.keys_robot.append((ds, sub, robot))
+                        tmp_data_idx_1 = [n] * len(human_valid_frames)
+                        tmp_data_idx_2 = list(human_valid_frames)
+                        self.data_idx_human.extend(zip(tmp_data_idx_1, tmp_data_idx_2))
+                        tmp_data_idx_1 = [n] * len(robot_valid_frames)
+                        tmp_data_idx_2 = list(robot_valid_frames)
+                        self.data_idx_robot.extend(zip(tmp_data_idx_1, tmp_data_idx_2))
                     n += 1
-
     def __len__(self):
         return np.shape(self.data_idx)[0]
 
     def __getitem__(self, item):
-        key, start_frame = self.data_idx[item]
-        fs = np.arange(start_frame, start_frame + self.in_n + self.out_n)
-        return self.p3d[key][fs]  # , key
+        hkey, hstart_frame = self.data_idx_human[item]
+        hfs = np.arange(hstart_frame, hstart_frame + self.in_n + self.out_n)
+        rkey, rstart_frame = self.data_idx_robot[item]
+        rfs = np.arange(rstart_frame, rstart_frame + self.in_n + self.out_n)
+        return self.p3d_human[hkey][hfs], self.p3d_robot[rkey][rfs]  # , key
 
 
 # In[12]:
