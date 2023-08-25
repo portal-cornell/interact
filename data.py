@@ -4,11 +4,10 @@ import numpy as np
 
 import sys
 
-sys.path.insert(0, '/home/atiksh/CHARM/utils')
 
 
-from read_json_data import read_json, get_pose_history, missing_data
-from ang2joint import *
+from utils.read_json_data import read_json, get_pose_history, missing_data
+from utils.ang2joint import *
 import networkx as nx
 import os
 

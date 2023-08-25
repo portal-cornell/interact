@@ -5,7 +5,7 @@ import torch_dct as dct #https://github.com/zh217/torch-dct
 import time
 
 from MRT.Models import Transformer,Discriminator
-from utils import disc_l2_loss,adv_disc_l2_loss
+from utils.loss_funcs import disc_l2_loss,adv_disc_l2_loss
 from torch.autograd import Variable
 import torch.nn as nn
 from torch.nn import init
