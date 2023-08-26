@@ -44,6 +44,8 @@ params_d = [
 ]
 optimizer_d = optim.Adam(params_d)
 
+ONE_HIST = True
+# import pdb;pdb.set_trace();
 
 for epoch in range(100):
     total_loss=0
@@ -53,7 +55,10 @@ for epoch in range(100):
         use=None
         input_seq,output_seq=data
         input_seq=torch.tensor(input_seq,dtype=torch.float32).to(device) # batch, N_person, 15 (15 fps 1 second), 45 (15joints xyz) 
-        output_seq=torch.tensor(output_seq,dtype=torch.float32).to(device) # batch, N_persons, 46 (last frame of input + future 3 seconds), 45 (15joints xyz) 
+        output_seq=torch.tensor(output_seq,dtype=torch.float32).to(device) # batch, N_persons, 46 (last frame of input + future 3 seconds), 45 (15joints xyz)
+        if ONE_HIST:
+            input_seq = input_seq[:,:1] 
+            output_seq = output_seq[:,:1]
 
         # first 1 second predict future 1 second
         input_=input_seq.view(-1,15,input_seq.shape[-1]) # batch x n_person ,15: 15 fps, 1 second, 45: 15joints x 3
@@ -65,33 +70,16 @@ for epoch in range(100):
         rec_=model.forward(input_[:,1:15,:]-input_[:,:14,:],dct.idct(input_[:,-1:,:]),input_seq,use)
 
         rec=dct.idct(rec_)
-
-        # first 2 seconds predict 1 second
-        new_input=torch.cat([input_[:,1:15,:]-input_[:,:14,:],dct.dct(rec_)],dim=-2)
         
-        new_input_seq=torch.cat([input_seq,output_seq[:,:,1:16]],dim=-2)
-        new_input_=dct.dct(new_input_seq.reshape(-1,30,45))
-        new_rec_=model.forward(new_input_[:,1:,:]-new_input_[:,:29,:],dct.idct(new_input_[:,-1:,:]),new_input_seq,use)
-
-        new_rec=dct.idct(new_rec_)
-
-        # first 3 seconds predict 1 second
-        new_new_input_seq=torch.cat([input_seq,output_seq[:,:,1:31]],dim=-2)
-        new_new_input_=dct.dct(new_new_input_seq.reshape(-1,45,45))
-        new_new_rec_=model.forward(new_new_input_[:,1:,:]-new_new_input_[:,:44,:],dct.idct(new_new_input_[:,-1:,:]),new_new_input_seq,use)
-
-        new_new_rec=dct.idct(new_new_rec_)
-        
-        rec=torch.cat([rec,new_rec,new_new_rec],dim=-2)
         results = output_[:,:1,:] # initial position
-        for i in range(1,31+15):
+        for i in range(1,16):
             # iteratively concatenate more output prediction frames
             results = torch.cat([results,output_[:,:1,:]+torch.sum(rec[:,:i,:],dim=1,keepdim=True)],dim=1) # adding up displacements to get true positions
         results =results[:,1:,:]
         # cumulative_sum = torch.cumsum(rec, dim=1)
         # results = output_[:, :1, :] + cumulative_sum[:, :45, :]
 
-        loss=torch.mean((rec[:,:,:]-(output_[:,1:46,:]-output_[:,:45,:]))**2)
+        loss=torch.mean((rec[:,:,:]-(output_[:,1:16,:]-output_[:,:15,:]))**2)
         
         
         if (j+1)%2==0:
@@ -104,7 +92,7 @@ for epoch in range(100):
             fake_motion=fake_motion.detach()
 
             real_motion=real_motion_all[int(j/2)][1][1]
-            real_motion=real_motion.view(-1,46,45)[:,1:46,:].float().to(device)
+            real_motion=real_motion.view(-1,46,45)[:,1:16,:].float().to(device)
 
             fake_disc_value = discriminator(fake_motion)
             real_disc_value = discriminator(real_motion)
@@ -124,7 +112,7 @@ for epoch in range(100):
 
     print('epoch:',epoch,'loss:',total_loss/(j+1))
     if (epoch+1)%5==0:
-        save_path=f'./saved_model/{epoch}.model'
+        save_path=f'./saved_model_marginal/{epoch}.model'
         torch.save(model.state_dict(),save_path)
 
 
