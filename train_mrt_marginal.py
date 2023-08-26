@@ -44,7 +44,7 @@ params_d = [
 ]
 optimizer_d = optim.Adam(params_d)
 
-ONE_HIST = True
+ONE_HIST = False
 # import pdb;pdb.set_trace();
 
 for epoch in range(100):
@@ -56,6 +56,8 @@ for epoch in range(100):
         input_seq,output_seq=data
         input_seq=torch.tensor(input_seq,dtype=torch.float32).to(device) # batch, N_person, 15 (15 fps 1 second), 45 (15joints xyz) 
         output_seq=torch.tensor(output_seq,dtype=torch.float32).to(device) # batch, N_persons, 46 (last frame of input + future 3 seconds), 45 (15joints xyz)
+        first_human_last_idx = input_seq.shape[0] 
+
         if ONE_HIST:
             input_seq = input_seq[:,:1] 
             output_seq = output_seq[:,:1]
@@ -79,6 +81,11 @@ for epoch in range(100):
         # cumulative_sum = torch.cumsum(rec, dim=1)
         # results = output_[:, :1, :] + cumulative_sum[:, :45, :]
 
+        if not ONE_HIST:
+            rec = rec[:first_human_last_idx] # marginal forecaster only cares about the predictions for the first human (normally the first idx is of size batch*N)
+            results = results[:first_human_last_idx]
+            output_ = output_[:first_human_last_idx]
+
         loss=torch.mean((rec[:,:,:]-(output_[:,1:16,:]-output_[:,:15,:]))**2)
         
         
@@ -93,6 +100,8 @@ for epoch in range(100):
 
             real_motion=real_motion_all[int(j/2)][1][1]
             real_motion=real_motion.view(-1,46,45)[:,1:16,:].float().to(device)
+            if not ONE_HIST:
+                real_motion = real_motion[:first_human_last_idx]
 
             fake_disc_value = discriminator(fake_motion)
             real_disc_value = discriminator(real_motion)
