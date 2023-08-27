@@ -1,5 +1,4 @@
-saved_model
-saved_model_marginal
+saved_model*
 *pycache*
 all_asfamc
 *.npy
