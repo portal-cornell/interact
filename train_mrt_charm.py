@@ -149,6 +149,11 @@ def train_model(args):
                         val_histories,use,
                         cond_future=val_cond_future)
                     val_rec = dct.idct(val_rec_)
+                    val_results = val_output_seq[:,alice_idx,:1,:] # initial position
+                    for i in range(1,16):
+                        # iteratively concatenate more output prediction frames
+                        val_results = torch.cat([val_results,val_output_seq[:,alice_idx,:1,:]+torch.sum(val_rec[:,:i,:],dim=1,keepdim=True)],dim=1) # adding up displacements to get true positions
+                    val_results = val_results[:,1:,:]
                     val_gt_vel = val_output_seq[:,alice_idx,1:16,:]-val_output_seq[:,alice_idx,:15,:]
                     val_loss += torch.mean((val_rec-val_gt_vel)**2)
                     
@@ -156,8 +161,20 @@ def train_model(args):
             
             val_loss /= num_val_batches
 
+            def mpjpe_loss(pred, output, dataset_scaling=1.0):
+                n_joints = int(pred.shape[-1]/3)
+                prediction = pred.view(pred.shape[0],-1,n_joints,3)
+                gt = output.view(pred.shape[0],-1,n_joints,3)
+                return 1000*torch.sqrt(((prediction/dataset_scaling - gt/dataset_scaling) ** 2).sum(dim=-1)).mean(dim=-1).mean(dim=-1).cpu().detach().numpy()
+
+            # NOTE: the 1.8 scaling is specific to CMU Mocap dataset, for others default to 1
+            # TODO: Create a map from dataset name to scaling factor and reference that
+            train_mpjpe = mpjpe_loss(results, output_seq[:,alice_idx,1:16], dataset_scaling=1.8)
+            val_mpjpe = mpjpe_loss(val_results, val_output_seq[:,alice_idx,1:16], dataset_scaling=1.8)
             writer.add_scalar('loss/train', loss, epoch + 1)
             writer.add_scalar('loss/val', val_loss, epoch + 1)
+            writer.add_scalar('mpjpe/train', np.mean(train_mpjpe), epoch + 1)
+            writer.add_scalar('mpjpe/val', np.mean(val_mpjpe), epoch + 1)
 
             model.train()
 
