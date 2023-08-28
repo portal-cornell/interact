@@ -144,6 +144,7 @@ class Transformer(nn.Module):
         self.src_pad_idx, self.trg_pad_idx = src_pad_idx, trg_pad_idx
         self.proj=nn.Linear(45,d_model) # 45: 15jointsx3
         self.proj2=nn.Linear(45,d_model)
+        self.cond_future_embed = None
         if conditional_forecaster:
             self.cond_future_embed = nn.Linear(45,d_model)
         self.proj_inverse=nn.Linear(d_model,45)
