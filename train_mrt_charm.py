@@ -29,7 +29,7 @@ def train_model(args):
     ONE_HIST = args.one_hist
     CONDITIONAL = args.conditional
     
-    batch_size=64
+    batch_size=args.batch_size
     torch.autograd.set_detect_anomaly(True)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True)
     
@@ -40,24 +40,22 @@ def train_model(args):
 
     device='cuda'
     model_id = f'{"1hist" if ONE_HIST else "2hist"}_{"marginal" if not CONDITIONAL else "conditional"}'
-    log_id = 4
-    log_dir = f'./logs{log_id}/{model_id}'
-    writer = SummaryWriter(log_dir=log_dir)
+    writer = SummaryWriter(log_dir=args.log_dir+'/'+model_id)
 
     model = Transformer(d_word_vec=128, d_model=128, d_inner=1024,
                 n_layers=3, n_head=8, d_k=64, d_v=64,device=device,conditional_forecaster=CONDITIONAL).to(device)
     discriminator = Discriminator(d_word_vec=45, d_model=45, d_inner=256,
                 n_layers=3, n_head=8, d_k=32, d_v=32,device=device).to(device)
 
-    lrate=0.0003
-    lrate2=0.0005
+    lrate=args.lr_pred
+    lrate2=args.lr_disc
 
     params = [
         {"params": model.parameters(), "lr": lrate}
     ]
     optimizer = optim.Adam(params)
     params_d = [
-        {"params": discriminator.parameters(), "lr": lrate}
+        {"params": discriminator.parameters(), "lr": lrate2}
     ]
     optimizer_d = optim.Adam(params_d)
 
