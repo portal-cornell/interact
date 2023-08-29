@@ -22,7 +22,7 @@ def get_marker(id, pose, edge, ns = 'current', alpha=1, red=1, green=1, blue=1):
 
     SCALE = 0.015
     marker = Marker()
-    marker.header.frame_id = "mocap"
+    marker.header.frame_id = "map"
     marker.header.stamp = rospy.Time.now()
     marker.type = marker.LINE_LIST
     marker.id = id
@@ -34,7 +34,7 @@ def get_marker(id, pose, edge, ns = 'current', alpha=1, red=1, green=1, blue=1):
     marker.color.b = blue
     marker.color.a = alpha
     p1m = Marker()
-    p1m.header.frame_id = "mocap"
+    p1m.header.frame_id = "map"
     p1m.header.stamp = rospy.Time.now()
     p1m.type = marker.SPHERE_LIST
     p1m.id = id + 101
@@ -115,7 +115,7 @@ if __name__ == '__main__':
         listener = keyboard.Listener(on_press=on_press)
         listener.start()
 
-        rate = rospy.Rate(600)
+        rate = rospy.Rate(120)
 
         person_data = {}
         for stream_person in data:
