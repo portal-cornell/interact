@@ -5,7 +5,7 @@ all_asfamc
 *.csv
 *.json
 view_npy.py
-*amass*
+amass*
 *body_models*
 *.bag
 logs*
