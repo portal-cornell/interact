@@ -48,10 +48,14 @@ for i in range(6000):
 data=np.array(data) # 6000 sequences, 3 persons, 120 (30 fps 4 seconds), 93 joints xyz (31x3)
 print(data.shape)
 
-use=[0,1,2,3,6,7,8,14,16,17,18,20,24,25,27] #used joints and order
+# default joints from CMU Mocap
+# use=[0,1,2,3,6,7,8,14,16,17,18,20,24,25,27] #used joints and order
+
+# our joints
+use = [14,17,24,19,26,20,27,21,28]
 data=data.reshape(data.shape[0],2,-1,31,3)
 data=data[:,:,:,use,:]
-data=data.reshape(data.shape[0],2,-1,45)
+data=data.reshape(data.shape[0],2,-1,len(use)*3)
 #In order to mix the data from different sources, we scale different data respectively in this code. 
 #This may make the result slightly different from the table in the paper.
 data=data*(1.0/0.45)*2.54/100.0
@@ -104,10 +108,14 @@ for i in range(800):
 
 data=np.array(data)
 
-use=[0,1,2,3,6,7,8,14,16,17,18,20,24,25,27] #used joints and order
+# default joints from CMU Mocap
+# use=[0,1,2,3,6,7,8,14,16,17,18,20,24,25,27] #used joints and order
+
+# our joints
+use = [14,17,24,19,26,20,27,21,28]
 data=data.reshape(data.shape[0],2,-1,31,3)
 data=data[:,:,:,use,:]
-data=data.reshape(data.shape[0],2,-1,45)
+data=data.reshape(data.shape[0],2,-1,len(use)*3)
 data=data*(1.0/0.45)*2.54/100.0 # scale
 print(data.shape)
 np.save('test_3_120_mocap.npy',data)
@@ -144,10 +152,14 @@ for i in range(6000):
 
 data=np.array(data) 
 
-use=[0,1,2,3,6,7,8,14,16,17,18,20,24,25,27] #used joints and order
+# default joints from CMU Mocap
+# use=[0,1,2,3,6,7,8,14,16,17,18,20,24,25,27] #used joints and order
+
+# our joints
+use = [14,17,24,19,26,20,27,21,28]
 data=data.reshape(data.shape[0],2,-1,31,3)
 data=data[:,:,:,use,:]
-data=data.reshape(data.shape[0],2,-1,45)
+data=data.reshape(data.shape[0],2,-1,len(use)*3)
 data=data*(1.0/0.45)*2.54/100.0 # scale
 print(data.shape)
 np.save('discriminator_3_120_mocap.npy',data)

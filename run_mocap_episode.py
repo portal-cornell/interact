@@ -6,6 +6,19 @@ from visualization_msgs.msg import MarkerArray, Marker
 from geometry_msgs.msg import Point
 import numpy as np
 from pynput import keyboard
+import torch
+import torch_dct as dct
+from train_mrt_charm import extract_histories, forward_pass
+from MRT.Models import Transformer
+
+ONE_HIST = False
+CONDITIONAL = True
+device = 'cuda'
+model = Transformer(d_word_vec=128, d_model=128, d_inner=1024,
+            n_layers=3, n_head=8, d_k=64, d_v=64,device=device,conditional_forecaster=CONDITIONAL)
+model_id = f'{"1hist" if ONE_HIST else "2hist"}_{"marginal" if not CONDITIONAL else "conditional"}'
+directory = f'./saved_model_{model_id}'
+model.load_state_dict(torch.load(f'{directory}/49.model'))
 
 with open('mocap_mapping.json', 'r') as f:
         mapping = json.load(f)
@@ -13,6 +26,7 @@ with open('mocap_mapping.json', 'r') as f:
 relevant_joints=['lowerneck', 'lclavicle', 'rclavicle',
                         'lradius', 'rradius', 'lwrist', 'rwrist', 'lhipjoint', 
                         'rhipjoint', 'lhand', 'rhand']
+model_joints_idx = [0,1,2,3,4,5,6,9,10]
 
 def get_motion_list(joints, motions):
     motion_list = []
@@ -32,6 +46,40 @@ def get_relevant_joints(all_joints, scale = 0.056444):
         pos = all_joints[mapping[joint]]
         relevant_joint_pos.append(pos*scale)
     return relevant_joint_pos
+
+def get_history(joint_data, current_idx, history_length, skip_rate = int(120/15)):
+    history_joints = []
+    for i in range(current_idx-(history_length-1)*skip_rate, current_idx+1, skip_rate):
+        idx = max(0, i)
+        history_joints.append(get_relevant_joints(joint_data[idx]))
+    return history_joints
+
+def get_future(joint_data, current_idx, future_length=15, skip_rate = int(120/15)):
+    future_joints = []
+    for i in range(current_idx+skip_rate, current_idx + future_length*skip_rate + 1, skip_rate):
+        idx = min(i, len(joint_data)-1)
+        future_joints.append(get_relevant_joints(joint_data[idx]))
+    return future_joints
+
+def get_forecast(alice_hist_raw, bob_hist_raw, alice_future_raw, bob_future_raw):
+    alice_hist = torch.Tensor(np.array(alice_hist_raw)[:,model_joints_idx]).reshape(len(alice_hist_raw),-1).unsqueeze(0).unsqueeze(0)
+    bob_hist = torch.Tensor(np.array(bob_hist_raw)[:,model_joints_idx]).reshape(len(bob_hist_raw),-1).unsqueeze(0).unsqueeze(0)
+    input_seq = torch.concat([alice_hist, bob_hist], dim=1)
+
+    alice_future = torch.Tensor(np.array(alice_future_raw)[:,model_joints_idx]).reshape(len(alice_future_raw),-1).unsqueeze(0).unsqueeze(0)
+    bob_future = torch.Tensor(np.array(bob_future_raw)[:,model_joints_idx]).reshape(len(bob_future_raw),-1).unsqueeze(0).unsqueeze(0)
+    output_seq = torch.cat([alice_future, bob_future], dim=1)
+
+    alice_idx = 0
+    bob_idx = 1
+
+    with torch.no_grad():
+        rec, results = forward_pass(model, input_seq, output_seq, alice_idx, bob_idx, ONE_HIST, CONDITIONAL)
+    # import pdb; pdb.set_trace()
+    alice_future_raw = np.array(alice_future_raw)
+    alice_future_raw[:,model_joints_idx,:] = results.reshape(15, 9, 3)
+    return alice_future_raw[:,:,:]
+
 
 
 def get_marker(id, pose, edge, ns = 'current', alpha=1, red=1, green=1, blue=1):
@@ -102,6 +150,14 @@ def get_marker_array(current_joints, future_joints, forecast_joints, person = "K
                          blue=0.0)
         marker_array.markers.append(tup[0])
         marker_array.markers.append(tup[1])
+    # import pdb; pdb.set_trace()
+    for idx, edge in enumerate(edges):
+        tup = get_marker(idx+100000, forecast_joints[-1], edge,ns=f'forecast', alpha=1, 
+                         red=0.1, 
+                         green=0.1, 
+                         blue=1.0)
+        marker_array.markers.append(tup[0])
+        marker_array.markers.append(tup[1])
 
     return marker_array
 
@@ -147,21 +203,36 @@ if __name__ == "__main__":
     listener.start()
 
     rate = rospy.Rate(120)
-    
+    import time
+    prev_time = time.time()
     for timestep in range(len(joint_data_B)):
         # print(round(timestep/120, 1))
+        print(time.time()-prev_time)
+        prev_time = time.time()
         if not pause and listener.running:
             current_joints_A = get_relevant_joints(joint_data_A[timestep])
             current_joints_B = get_relevant_joints(joint_data_B[timestep])
+            
+            T_in = 15
+            T_out = 15
+            history_joints_A = get_history(joint_data_A, timestep, T_in)
+            history_joints_B = get_history(joint_data_B, timestep, T_in)
+            future_joints_A = get_future(joint_data_A, timestep, T_out)
+            future_joints_B = get_future(joint_data_B, timestep, T_out)
+            forecast_joints_A = None
+            forecast_joints_B = None
+            forecast_joints_A = get_forecast(history_joints_A, history_joints_B, future_joints_A, future_joints_B)
+            forecast_joints_B = get_forecast(history_joints_B, history_joints_A, future_joints_B, future_joints_A)
+
             marker_array_A = get_marker_array(current_joints=current_joints_A, 
-                                            future_joints=None,
-                                            forecast_joints=None,
+                                            future_joints=future_joints_A,
+                                            forecast_joints=forecast_joints_A,
                                             person="Atiksh")
             marker_array_B = get_marker_array(current_joints=current_joints_B, 
-                            future_joints=None,
-                            forecast_joints=None,
+                            future_joints=future_joints_B,
+                            forecast_joints=forecast_joints_B,
                             person="Kushal")
-                            
+            
             human_A_forecast.publish(marker_array_A)
             human_B_forecast.publish(marker_array_B)
             rate.sleep()

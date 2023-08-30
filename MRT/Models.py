@@ -5,6 +5,7 @@ import numpy as np
 from MRT.Layers import EncoderLayer, DecoderLayer
 import torch.nn.functional as F
 
+JOINT_AMT = 9
 
 def get_pad_mask(seq, pad_idx):
     return (seq != pad_idx).unsqueeze(-2)
@@ -142,12 +143,15 @@ class Transformer(nn.Module):
         
         self.d_model=d_model
         self.src_pad_idx, self.trg_pad_idx = src_pad_idx, trg_pad_idx
-        self.proj=nn.Linear(45,d_model) # 45: 15jointsx3
-        self.proj2=nn.Linear(45,d_model)
+        self.proj=nn.Linear(JOINT_AMT*3,d_model) # 45: 15jointsx3
+        self.proj2=nn.Linear(JOINT_AMT*3,d_model)
         self.cond_future_embed = None
         if conditional_forecaster:
-            self.cond_future_embed = nn.Linear(45,d_model)
-        self.proj_inverse=nn.Linear(d_model,45)
+            self.cond_future_embed = nn.Linear(JOINT_AMT*3,d_model)
+        self.proj_inverse=nn.Linear(d_model,JOINT_AMT*3)
+        self.cond_decoder_linear = None
+        if conditional_forecaster:
+            self.cond_decoder_linear = nn.Linear(d_model,d_model)
         self.l1=nn.Linear(d_model, d_model*4)
         self.l2=nn.Linear(d_model*4, d_model*15)
 
@@ -218,7 +222,6 @@ class Transformer(nn.Module):
         cond_future: future plan of the other agent that is being conditioned
         '''
         n_person=input_seq.shape[1]
-
         #src_mask = (torch.ones([src_seq.shape[0],1,src_seq.shape[1]])==True).to(self.device)
         # import pdb; pdb.set_trace()
         src_seq_=self.proj(src_seq)
@@ -226,9 +229,9 @@ class Transformer(nn.Module):
         if self.cond_future_embed:
             trg_seq_ = torch.cat([trg_seq_, self.cond_future_embed(cond_future)],dim=1)
 
-        enc_output, *_ = self.encoder(src_seq_, n_person, None)
+        enc_output, *_ = self.encoder(src_seq_, 1, None)
         
-        others=input_seq[:,:,:,:].view(input_seq.shape[0],-1,45)
+        others=input_seq[:,:,:,:].view(input_seq.shape[0],-1,JOINT_AMT*3)
         others_=self.proj2(others)
         mask_other=None
         mask_dec=None
@@ -257,13 +260,14 @@ class Transformer(nn.Module):
         # import pdb; pdb.set_trace()
         
         enc_output=torch.cat([enc_output,enc_others+torch.exp(-c)],dim=1)
-        dec_output, dec_attention,*_ = self.decoder(trg_seq_[:,:1,:], None, enc_output, mask_dec)
-        
-
-        # import pdb; pdb.set_trace()
-        dec_output= self.l1(dec_output)
-        dec_output= self.l2(dec_output)
-        dec_output=dec_output.view(dec_output.shape[0],15,self.d_model)
+        dec_output, dec_attention,*_ = self.decoder(trg_seq_[:,:,:], None, enc_output, mask_dec)
+        if self.cond_decoder_linear:
+            dec_output = self.cond_decoder_linear(dec_output)
+            dec_output=dec_output[:,:15]
+        else:
+            dec_output= self.l1(dec_output)
+            dec_output= self.l2(dec_output)
+            dec_output=dec_output.view(dec_output.shape[0],15,self.d_model)
         
         dec_output=self.proj_inverse(dec_output)
         
@@ -287,7 +291,7 @@ def forward_multi_predict(self, src_seq, trg_seq, input_seq, use=None):
 
         enc_output, *_ = self.encoder(src_seq_, n_person, None)
         
-        others=input_seq[:,:,:,:].view(input_seq.shape[0],-1,45)
+        others=input_seq[:,:,:,:].view(input_seq.shape[0],-1,JOINT_AMT*3)
         others_=self.proj2(others)
         mask_other=None
         mask_dec=None
@@ -344,7 +348,7 @@ class Discriminator(nn.Module):
                 n_layers=n_layers, n_head=n_head, d_k=d_k, d_v=d_v,
                 pad_idx=src_pad_idx, dropout=dropout, device=self.device)
             
-        self.fc=nn.Linear(45,1)
+        self.fc=nn.Linear(JOINT_AMT*3,1)
         
     
     def forward(self, x):
