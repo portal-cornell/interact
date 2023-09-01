@@ -4,7 +4,7 @@ import numpy as np
 import torch_dct as dct #https://github.com/zh217/torch-dct
 import time
 
-from MRT.Models import Transformer,Discriminator
+from MRT.Models import Transformer,Discriminator,JOINT_AMT
 from utils.loss_funcs import disc_l2_loss,adv_disc_l2_loss
 from torch.autograd import Variable
 import torch.nn as nn
@@ -24,38 +24,54 @@ real_=D_DATA()
 def extract_histories(input_seq, human_idxs):
     return input_seq[:, human_idxs]
 
-def forward_pass(model, input_seq,output_seq,alice_idx,bob_idx,one_hist,conditional):
+def forward_pass(model,alice_hist,bob_hist,bob_future,alice_idx,bob_idx,one_hist,conditional,bob_is_robot=False):
     use=None
     ONE_HIST = one_hist
     CONDITIONAL = conditional
+    # TODO: Change the common joints depending on if bob is not a robot and if bob is a robot
+    common_joints = [i for i in range(JOINT_AMT*3)] if not bob_is_robot else [i for i in range(JOINT_AMT*3)]
     
-    input_ = dct.dct(input_seq) # batch, N_person, T_in (15), 45 (15joints * 3xyz)
+    input_ = dct.dct(alice_hist) # batch, T_in (15), 45 (15joints * 3xyz)
 
-    source_seq = input_[:,alice_idx,1:15,:]-input_[:,alice_idx,:14,:] # 14 displacements, as done in original code
-    target_seq = dct.idct(input_[:,alice_idx,-1:,:]) # Alice's current position
-    relevant_human_idxs = [alice_idx]
-    if not ONE_HIST:
-        relevant_human_idxs.append(bob_idx)
-    # TODO: Add MLP to project bob's joints into same embedding
-    histories = extract_histories(input_seq, relevant_human_idxs) # batch, N_person, T_in (15), 45
+    source_seq = input_[:,1:15,:]-input_[:,:14,:] # 14 displacements, as done in original code
+    target_seq = dct.idct(input_[:,-1:,:]) # Alice's current position
+    # relevant_human_idxs = [alice_idx]
+    # if not ONE_HIST:
+    #     relevant_human_idxs.append(bob_idx)
+    # # TODO: Add MLP to project bob's joints into same embedding
+    # histories = extract_histories(input_seq, relevant_human_idxs) # batch, N_person, T_in (15), 45
 
     # CONDITIONAL: Relative positions of Bob compared to a joint position at Alice's current timestep
     # TODO: Use relevant joints for bob (that will be wrist and hand)
-    cond_future = (output_seq[:,bob_idx,:15,:]-target_seq[:,-1:,:]) if CONDITIONAL else None
+    cond_future = (bob_hist[:,:15,:]-target_seq[:,-1:,:])
+    if not CONDITIONAL:
+        cond_future.fill_(0)
 
-    rec_=model.forward(source_seq,target_seq,histories,use,cond_future=cond_future)
+    rec_=model.forward(source_seq,target_seq,alice_hist,bob_hist,common_joints,use,cond_future=cond_future,bob_is_robot=bob_is_robot,one_hist=ONE_HIST)
 
     rec=dct.idct(rec_) # predicts displacements for each of Alice's joints - batch, T_out (15), 45
     
-    results = output_seq[:,alice_idx,:1,:] # initial position
+    results = alice_hist[:,-1:,:] # initial position
     for i in range(1,16):
         # iteratively concatenate more output prediction frames to get actual positions from the displacements
         # TODO: change to cumsum
-        results = torch.cat([results,output_seq[:,alice_idx,:1,:]+torch.sum(rec[:,:i,:],dim=1,keepdim=True)],dim=1) # adding up displacements to get true positions
+        results = torch.cat([results,alice_hist[:,-1:,:]+torch.sum(rec[:,:i,:],dim=1,keepdim=True)],dim=1) # adding up displacements to get true positions
     # ignore first timestep of this since it overlaps with last timestep of input 
     results =results[:,1:,:] # batch, T_out (15), 45
 
     return rec, results
+
+def compute_loss(model, input_seq_tmp, output_seq, alice_idx, bob_idx, ONE_HIST, CONDITIONAL, device):
+    alice_hist = input_seq_tmp[:, alice_idx]
+    bob_hist = input_seq_tmp[:, bob_idx]
+
+    rec, results = forward_pass(model, alice_hist, bob_hist, output_seq[:, bob_idx],
+                                alice_idx, bob_idx, ONE_HIST, CONDITIONAL, bob_is_robot=True)
+
+    gt_disp = output_seq[:, alice_idx, 1:16, :] - output_seq[:, alice_idx, :15, :]
+
+    loss = torch.mean((rec - gt_disp) ** 2)
+    return loss, results
 
 
 def train_model(args):
@@ -98,16 +114,16 @@ def train_model(args):
         total_loss=0
         
         for j,data in enumerate(dataloader,0):
-            input_seq,output_seq=data
-            input_seq=torch.tensor(input_seq,dtype=torch.float32).to(device) # batch, N_person, 15 (15 fps 1 second), 45 (15joints xyz) 
+            input_seq_tmp,output_seq=data
+            # TODO: Once we have the dataloaders ready with human vs. robot data, this will change since dims are different
+            input_seq_tmp=torch.tensor(input_seq_tmp,dtype=torch.float32).to(device) # batch, N_person, 15 (15 fps 1 second), 45 (15joints xyz) 
             output_seq=torch.tensor(output_seq,dtype=torch.float32).to(device) # batch, N_persons, 46 (last frame of input + future 3 seconds), 45 (15joints xyz)
             alice_idx = 0 # human at 0th index is who we want the forecast for
             bob_idx = 1 # human at 1st index is whose future we are conditioning on
 
-            rec, results = forward_pass(model, input_seq, output_seq, alice_idx, bob_idx, ONE_HIST, CONDITIONAL)
+            loss, results=compute_loss(model, input_seq_tmp, output_seq, alice_idx, bob_idx,
+                                        ONE_HIST, CONDITIONAL, device)
             
-            gt_disp = output_seq[:,alice_idx,1:16,:]-output_seq[:,alice_idx,:15,:] # batch, T_out (15), 45
-            loss=torch.mean((rec-gt_disp)**2)
             
             
             # if (j+1)%2==0:
@@ -147,32 +163,16 @@ def train_model(args):
             
             with torch.no_grad():
                 for val_data in test_dataloader:
-                    val_input_seq, val_output_seq = val_data
-                    val_input_seq = torch.tensor(val_input_seq, dtype=torch.float32).to(device)
+                    val_input_seq_tmp, val_output_seq = val_data
+                    val_input_seq_tmp = torch.tensor(val_input_seq_tmp, dtype=torch.float32).to(device)
                     val_output_seq = torch.tensor(val_output_seq, dtype=torch.float32).to(device)
-
-                    val_input_ = dct.dct(val_input_seq)
-
-                    val_source_seq = val_input_[:,alice_idx,1:15,:]-val_input_[:,alice_idx,:14,:]
-                    val_target_seq = dct.idct(val_input_[:,alice_idx,-1:,:])
-                    val_relevant_human_idxs = [alice_idx]
-                    if not ONE_HIST:
-                        val_relevant_human_idxs.append(bob_idx)
-                    val_histories = extract_histories(val_input_seq, val_relevant_human_idxs)
-                    val_cond_future = (val_output_seq[:,bob_idx,:15,:]-val_input_[:,alice_idx,-1:,:1]) if CONDITIONAL else None
-
-                    val_rec_ = model.forward(val_source_seq,val_target_seq,
-                        val_histories,use,
-                        cond_future=val_cond_future)
-                    val_rec = dct.idct(val_rec_)
-                    val_results = val_output_seq[:,alice_idx,:1,:] # initial position
-                    for i in range(1,16):
-                        # iteratively concatenate more output prediction frames
-                        val_results = torch.cat([val_results,val_output_seq[:,alice_idx,:1,:]+torch.sum(val_rec[:,:i,:],dim=1,keepdim=True)],dim=1) # adding up displacements to get true positions
-                    val_results = val_results[:,1:,:]
-                    val_gt_disp = val_output_seq[:,alice_idx,1:16,:]-val_output_seq[:,alice_idx,:15,:]
-                    val_loss += torch.mean((val_rec-val_gt_disp)**2)
                     
+                    val_alice_idx = 0
+                    val_bob_idx = 1
+
+                    cur_val_loss, val_results = compute_loss(model, val_input_seq_tmp, val_output_seq, val_alice_idx, val_bob_idx,
+                                                     ONE_HIST, CONDITIONAL, device)
+                    val_loss += cur_val_loss
                     num_val_batches += 1
             
             val_loss /= num_val_batches
