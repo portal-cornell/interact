@@ -8,4 +8,5 @@ view_npy.py
 amass*
 *body_models*
 *.bag
+*.txt
 logs*
