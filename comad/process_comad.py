@@ -4,9 +4,10 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.animation as animation
 
-activity_name = 'table_set_2'
+activity_name = 'handover'
+activity_number = '4'
 
-csv_name = f'./comad/{activity_name}/{activity_name}.csv'
+csv_name = f'./comad/csv/{activity_name}/{activity_name}_{activity_number}.csv'
 df = pd.read_csv(csv_name, header=None,skiprows=2, low_memory=False)
 joints_to_idx = {}
 joints_to_idx = {}
@@ -33,6 +34,7 @@ frames = frames[:, first_marker:last_marker+1]
 print(frames.shape)
 input()
 frames = frames.reshape(-1, 50, 3)/1000
+print(frames.shape)
 
 table_set1_ep = [
     ("1:01","1:22"),
@@ -138,6 +140,19 @@ react_stir2_ep = [
 
 react_stir2_offset = 1
 
+start_end_file = f'./comad/json/{activity_name}/{activity_name}_{activity_number}/start_end.txt'
+
+current_ep = []
+curr_offset = 0
+with open(start_end_file, 'r') as f:
+    times = f.readlines()
+    curr_offset = int(times[0])
+    times = times[1::1]
+    for line in times:
+        start_end = line.split(" - ")
+        current_ep.append((start_end[0], start_end[1]))
+
+
 def convert_time_to_frame(time, hz, offset):
     mins = int(time[:time.find(':')])
     secs = int(time[time.find(':')+1:])
@@ -146,9 +161,9 @@ def convert_time_to_frame(time, hz, offset):
 clips = []
 atiksh_arr_fin = []
 kushal_arr_fin = []
-for start, end in table_set2_ep:
-    start_frame = convert_time_to_frame(start, 120, table_set2_offset)
-    end_frame = convert_time_to_frame(end, 120, table_set2_offset) + 240  #The +240 frames here is essentially adding 2 extra seconds to the episode
+for start, end in current_ep:
+    start_frame = convert_time_to_frame(start, 120, curr_offset)
+    end_frame = convert_time_to_frame(end, 120, curr_offset) + 240  #The +240 frames here is essentially adding 2 extra seconds to the episode
 
     atiksh_arr = np.nan_to_num(frames[start_frame:end_frame, :25, :]).tolist()
     atiksh_arr_fin.append(atiksh_arr)
@@ -166,5 +181,5 @@ for start, end in table_set2_ep:
 # np.save(f"./comad/{activity_name}/{activity_name}_train.npy", np.array(data))
 import json
 for idx in range(len(clips)):
-    with open(f'./comad/{activity_name}/{activity_name}_{idx}.json', 'w') as f:
+    with open(f'./comad/json/{activity_name}/{activity_name}_{activity_number}/{activity_name}_{activity_number}_{idx}.json', 'w') as f:
         json.dump(clips[idx], f, indent=4)

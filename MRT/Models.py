@@ -5,6 +5,9 @@ import numpy as np
 from MRT.Layers import EncoderLayer, DecoderLayer
 import torch.nn.functional as F
 
+JOINT_AMT = 9
+BOB_HUMAN_JOINT_AMT = 9
+BOB_ROBOT_JOINT_AMT = 9
 
 def get_pad_mask(seq, pad_idx):
     return (seq != pad_idx).unsqueeze(-2)
@@ -142,12 +145,13 @@ class Transformer(nn.Module):
         
         self.d_model=d_model
         self.src_pad_idx, self.trg_pad_idx = src_pad_idx, trg_pad_idx
-        self.proj=nn.Linear(45,d_model) # 45: 15jointsx3
-        self.proj2=nn.Linear(45,d_model)
-        self.cond_future_embed = None
-        if conditional_forecaster:
-            self.cond_future_embed = nn.Linear(45,d_model)
-        self.proj_inverse=nn.Linear(d_model,45)
+        self.proj=nn.Linear(JOINT_AMT*3,d_model) # 45: 15jointsx3
+        self.proj2=nn.Linear(JOINT_AMT*3,d_model)
+        self.cond_future_embed = nn.Linear(JOINT_AMT*3,d_model)
+        self.bob_robot_hist_embed = nn.Linear(BOB_ROBOT_JOINT_AMT*3,d_model)
+        self.bob_human_hist_embed = nn.Linear(BOB_HUMAN_JOINT_AMT*3,d_model)
+        self.proj_inverse=nn.Linear(d_model,JOINT_AMT*3)
+        self.cond_decoder_linear = nn.Linear(d_model,d_model)
         self.l1=nn.Linear(d_model, d_model*4)
         self.l2=nn.Linear(d_model*4, d_model*15)
 
@@ -209,7 +213,7 @@ class Transformer(nn.Module):
 
     
 
-    def forward(self, src_seq, trg_seq, input_seq, use=None, cond_future=None):
+    def forward(self, src_seq, trg_seq, alice_hist, bob_hist, common_joints, use=None, cond_future=None, bob_is_robot=False, one_hist=False):
         '''
         Produces one forecast
         src_seq: local
@@ -217,27 +221,35 @@ class Transformer(nn.Module):
         input_seq: global
         cond_future: future plan of the other agent that is being conditioned
         '''
-        n_person=input_seq.shape[1]
-
+        # n_person=input_seq.shape[1]
         #src_mask = (torch.ones([src_seq.shape[0],1,src_seq.shape[1]])==True).to(self.device)
         # import pdb; pdb.set_trace()
         src_seq_=self.proj(src_seq)
         trg_seq_=self.proj2(trg_seq)
-        if self.cond_future_embed:
-            trg_seq_ = torch.cat([trg_seq_, self.cond_future_embed(cond_future)],dim=1)
+        trg_seq_ = torch.cat([trg_seq_, self.cond_future_embed(cond_future)],dim=1)
 
-        enc_output, *_ = self.encoder(src_seq_, n_person, None)
+        enc_output, *_ = self.encoder(src_seq_, 1, None)
         
-        others=input_seq[:,:,:,:].view(input_seq.shape[0],-1,45)
-        others_=self.proj2(others)
+        # TODO: Dimensions of Alice's joints won't match Bob's anymore, so use a different
+        # MLP to get Bob's joint history into the same temp embedding dimension and concat
+        # Note: there will be two different MLPs depending on if Bob is a human vs. robot
+        # others=input_seq[:,:,:,:].view(input_seq.shape[0],-1,JOINT_AMT*3)
+        others_=self.proj2(alice_hist)
+        others_ = others_.unsqueeze(1)
+        if bob_is_robot:
+            bob_embed = self.bob_robot_hist_embed(bob_hist)
+        else:
+            bob_embed = self.bob_human_hist_embed(bob_hist)
+        if not one_hist:
+            others_ = torch.cat([others_, bob_embed.unsqueeze(1)],dim=1)
+        others_ = others_[:,:,:,:].view(others_.shape[0],-1,self.d_model)
         mask_other=None
         mask_dec=None
 
         #mask_other=torch.zeros([others.shape[0],1,others_.shape[1]]).to(self.device).long()
         #for i in range(len(use)):
         #    mask_other[i][0][:use[i]*15]=1
-
-        enc_others,*_=self.encoder_global(others_,n_person, mask_other, global_feature=True)
+        enc_others,*_=self.encoder_global(others_,1 if one_hist else 2, mask_other, global_feature=True)
         # enc_others=enc_others.unsqueeze(1).expand(input_seq.shape[0],input_seq.shape[1],-1,self.d_model)
         
         enc_others=enc_others.reshape(enc_output.shape[0],-1,self.d_model)
@@ -247,23 +259,26 @@ class Transformer(nn.Module):
 
         # temp_a=input_seq.unsqueeze(1).repeat(1,input_seq.shape[1],1,1,1)
         # temp_b=input_seq[:,:,-1:,:].unsqueeze(2).repeat(1,1,input_seq.shape[1],1,1)
-        temp_a = input_seq
-        temp_b = input_seq[:,:,-1:,:]
+        common_joint_hists = alice_hist[:,:,common_joints].unsqueeze(1)
+        if not one_hist:
+            common_joint_hists = torch.cat([common_joint_hists, bob_hist[:,:,common_joints].unsqueeze(1)],dim=1)
+        temp_a = common_joint_hists
+        temp_b = common_joint_hists[:,:,-1:,:]
         
         c=torch.mean((temp_a-temp_b)**2,dim=-1)
         
         # c=c.reshape(c.shape[0]*c.shape[1],c.shape[2]*c.shape[3],1)
         c=c.reshape(c.shape[0],c.shape[1]*c.shape[2],1)
-        # import pdb; pdb.set_trace()
         
         enc_output=torch.cat([enc_output,enc_others+torch.exp(-c)],dim=1)
-        dec_output, dec_attention,*_ = self.decoder(trg_seq_[:,:1,:], None, enc_output, mask_dec)
-        
-
-        # import pdb; pdb.set_trace()
-        dec_output= self.l1(dec_output)
-        dec_output= self.l2(dec_output)
-        dec_output=dec_output.view(dec_output.shape[0],15,self.d_model)
+        dec_output, dec_attention,*_ = self.decoder(trg_seq_[:,:,:], None, enc_output, mask_dec)
+        # if self.cond_decoder_linear:
+        dec_output = self.cond_decoder_linear(dec_output)
+        dec_output=dec_output[:,:15]
+        # else:
+        #     dec_output= self.l1(dec_output)
+        #     dec_output= self.l2(dec_output)
+        #     dec_output=dec_output.view(dec_output.shape[0],15,self.d_model)
         
         dec_output=self.proj_inverse(dec_output)
         
@@ -287,7 +302,7 @@ def forward_multi_predict(self, src_seq, trg_seq, input_seq, use=None):
 
         enc_output, *_ = self.encoder(src_seq_, n_person, None)
         
-        others=input_seq[:,:,:,:].view(input_seq.shape[0],-1,45)
+        others=input_seq[:,:,:,:].view(input_seq.shape[0],-1,JOINT_AMT*3)
         others_=self.proj2(others)
         mask_other=None
         mask_dec=None
@@ -344,7 +359,7 @@ class Discriminator(nn.Module):
                 n_layers=n_layers, n_head=n_head, d_k=d_k, d_v=d_v,
                 pad_idx=src_pad_idx, dropout=dropout, device=self.device)
             
-        self.fc=nn.Linear(45,1)
+        self.fc=nn.Linear(JOINT_AMT*3,1)
         
     
     def forward(self, x):
