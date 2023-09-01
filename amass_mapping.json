@@ -21,6 +21,6 @@
     "R_Elbow": 19,
     "L_Wrist": 20,
     "R_Wrist": 21,
-    "L_Hand": 22,
-    "R_Hand": 23
+    "L_Hand": 28,
+    "R_Hand": 43
 }

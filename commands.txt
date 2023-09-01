@@ -1,0 +1,9 @@
+python run_amass_episode.py --ep_num amass_CMU_144_144_27_poses
+
+python run_amass_episode.py --ep_num amass_CMU_12_12_03_poses
+
+python run_mocap_episode.py --alice 18 --bob 19 --ep_num 01
+
+python run_mocap_episode.py --alice 22 --bob 23 --ep_num 01
+
+python run_comad_episode.py --dataset table_set_1 --ep_num 0

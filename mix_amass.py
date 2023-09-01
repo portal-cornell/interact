@@ -2,7 +2,7 @@ import os
 import numpy as np
 import torch
 import random
-from utils.read_json_data import read_json, get_pose_history, missing_data
+import json
 from utils.ang2joint import *
 
 path_to_data = 'amass/'
@@ -43,17 +43,30 @@ for ds in amass_splits['train']:
             except:
                 print('no poses at {}_{}_{}'.format(ds, sub, act))
                 continue
-            
+            trans = pose_all['trans']
+            frame_rate = pose_all['mocap_framerate']
             fn = poses.shape[0]
+            sample_rate = int(frame_rate // 15)
+            fidxs = range(0, fn, sample_rate)
+            fn = len(fidxs)
+
+            poses = poses[fidxs]
+            trans = trans[fidxs]
             poses = torch.from_numpy(poses).float()
             poses = poses.reshape([fn, -1, 3])
+            # poses[:, 0:, 0] = np.expand_dims(trans, 1)
+            # import pdb; pdb.set_trace()
+            # poses[:, 0] = torch.from_numpy(trans).float()
             poses[:, 0] = 0
             p3d0_tmp = p3d0.repeat([fn, 1, 1])
             p3d_human = ang2joint(p3d0_tmp, poses, parent)
-
+            
             alice_poses.append(p3d_human.numpy())
             lengths.append(p3d_human.shape[0])
+        if len(alice_poses)>100:
+            break
 
+max_length = np.max(np.array(lengths))
 bob_poses = []
 
 for alice_index, alice_pose in enumerate(alice_poses):
@@ -66,15 +79,44 @@ for alice_index, alice_pose in enumerate(alice_poses):
         if alice_pose.shape[0] <= bob_pose.shape[0]:
             bob_poses.append(bob_pose[:alice_pose.shape[0]])
             bob_not_found = False
-        elif alice_pose.shape[0] > 22900:
-            if bob_pose.shape[0] > 22000:
-                import pdb; pdb.set_trace()
-                alice_poses[alice_index] = alice_poses[alice_index][:bob_pose.shape[0]]
-                bob_poses.append(bob_pose)
-                bob_not_found = False
-        
-for alice_pose, bob_pose in zip(alice_poses, bob_poses):
-    ### Do some transformation and combine so there is no close interaction
-    if alice_pose.shape[0] != bob_pose.shape[0]:
-        print("KALIYUGA")
+        elif alice_pose.shape[0] == max_length:
+            bob_poses.append(alice_pose)
+            bob_not_found = False
+        # elif alice_pose.shape[0] > 22900:
+        #     if bob_pose.shape[0] > 22000:
+        #         alice_poses[alice_index] = alice_poses[alice_index][:bob_pose.shape[0]]
+        #         bob_poses.append(bob_pose)
+        #         bob_not_found = False
+
+import copy
+for idx, (alice_pose, bob_pose) in enumerate(zip(alice_poses, bob_poses)):
+    ### TODD: Do some transformation and combine so there is no close interaction
+    # import pdb; pdb.set_trace()
+    away = False
+    while not away:
+        translation = np.random.rand(2)*2-1
+        rotation = np.random.rand(1)*3.14*0.5
+
+        # import pdb; pdb.set_trace()
+        cand_bob_pose = copy.deepcopy(bob_pose)
+        cand_bob_pose[:, :, [0, 2]] += translation
+        x, y = cand_bob_pose[:, :, 0], cand_bob_pose[:, :, 2]
+        cand_bob_pose[:, :, 0] = x*np.cos(rotation)+y*np.sin(rotation)
+        cand_bob_pose[:, :, 2] = -x*np.sin(rotation)+y*np.cos(rotation)
+
+        dist = np.min(np.linalg.norm(cand_bob_pose-alice_pose,axis=-1))
+        if dist > 0.5:
+            away = True
+
+    print(alice_filenames[idx])
+    alice_bob_data = {
+        'alice': alice_pose.tolist(),
+        'bob': cand_bob_pose.tolist()
+    }
+
+    filename = alice_filenames[idx].replace('/', '_').replace('.npz', '')
+
+    with open(f'synthetic_amass/{filename}.json', 'w') as f:
+        json.dump(alice_bob_data, f, indent=4)
+    # import pdb; pdb.set_trace()
 

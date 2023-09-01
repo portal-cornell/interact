@@ -3,9 +3,10 @@ saved_model*
 all_asfamc
 *.npy
 *.csv
-*.json
+comad*
 view_npy.py
-amass*
+amass/*
 *body_models*
 *.bag
 logs*
+synthetic_amass
