@@ -2,8 +2,8 @@ from torch.utils.data import Dataset, DataLoader
 import numpy as np
 import torch
 import os
-# from utils.read_json_data import read_json, get_pose_history
-from read_json_data import read_json, get_pose_history
+from utils.read_json_data import read_json, get_pose_history
+# from read_json_data import read_json, get_pose_history
 
 class Synthetic_AMASS(Dataset):
 
@@ -14,7 +14,7 @@ class Synthetic_AMASS(Dataset):
             output_n = 15,
             sample_rate = 15,
             output_rate = 15,
-            mapping_json = "amass_mapping.json", 
+            mapping_json = "mapping/amass_mapping.json", 
             split='train'
             ):
         """
@@ -52,9 +52,9 @@ class Synthetic_AMASS(Dataset):
 
             downsample_rate = self.sample_rate // self.output_rate
             alice_tensor = get_pose_history(json_data, 
-                            "alice")[::downsample_rate]
+                            "alice")[::downsample_rate,self.joint_used]
             bob_tensor = get_pose_history(json_data, 
-                            "bob")[::downsample_rate]
+                            "bob")[::downsample_rate,self.joint_used]
             # chop the tensor into a bunch of slices of size sequence_len
             for start_frame in range(alice_tensor.shape[0]-self.sequence_len):
                 end_frame = start_frame + self.sequence_len
@@ -63,7 +63,7 @@ class Synthetic_AMASS(Dataset):
 
                 self.bob_input.append(bob_tensor[start_frame:start_frame+self.input_n])
                 self.bob_output.append(bob_tensor[start_frame+self.input_n:end_frame])
-            
+            break
         print(len(self.alice_input))
 
     def __len__(self):

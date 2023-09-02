@@ -13,7 +13,7 @@ class CMU_Mocap(Dataset):
             output_n = 15,
             sample_rate = 120,
             output_rate = 15,
-            mapping_json = "mocap_mapping.json", 
+            mapping_json = "mapping/mocap_mapping.json", 
             split='train'
             ):
         """
@@ -51,9 +51,9 @@ class CMU_Mocap(Dataset):
 
             downsample_rate = self.sample_rate // self.output_rate
             alice_tensor = get_pose_history(json_data, 
-                            "alice")[::downsample_rate]
+                            "alice")[::downsample_rate, self.joint_used]
             bob_tensor = get_pose_history(json_data, 
-                            "bob")[::downsample_rate]
+                            "bob")[::downsample_rate, self.joint_used]
             # chop the tensor into a bunch of slices of size sequence_len
             for start_frame in range(alice_tensor.shape[0]-self.sequence_len):
                 end_frame = start_frame + self.sequence_len

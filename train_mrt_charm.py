@@ -97,9 +97,7 @@ def train_model(args):
     params_d = [
         {"params": discriminator.parameters(), "lr": lrate2}
     ]
-    optimizer_d = optim.Adam(params_d)
-
-    for epoch in range(50):
+    for epoch in range(args.epochs):
         total_loss=0
         
         for j,data in enumerate(dataloader,0):
