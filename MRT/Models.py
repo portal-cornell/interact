@@ -226,8 +226,11 @@ class ConditionalForecaster(nn.Module):
 
         dec_output, dec_attention, *_ = self.decoder(bob_cond_future_enc, None, encoder_output, None)
         dec_output = self.decoder_linear(dec_output)
-        alice_forecasts = self.forecast_head(dec_output)
-        
+        alice_forecasts_dct = self.forecast_head(dec_output)
+        alice_forecasts_displacments = dct.idct(alice_forecasts_dct)
+
+        alice_forecasts = torch.cumsum(alice_forecasts_displacments, dim=1)
+
         return alice_forecasts
     
 class Transformer(nn.Module):
