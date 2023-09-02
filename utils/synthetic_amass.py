@@ -63,7 +63,7 @@ class Synthetic_AMASS(Dataset):
 
                 self.bob_input.append(bob_tensor[start_frame:start_frame+self.input_n])
                 self.bob_output.append(bob_tensor[start_frame+self.input_n:end_frame])
-            break
+            # break
         print(len(self.alice_input))
 
     def __len__(self):

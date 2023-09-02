@@ -191,8 +191,7 @@ class ConditionalForecaster(nn.Module):
             alice_hist, 
             bob_hist, 
             bob_future,
-            common_joints, 
-            use=None, 
+            add_spe=True, 
             cond_future=None, 
             bob_is_robot=False, 
             one_hist=False):
@@ -221,6 +220,10 @@ class ConditionalForecaster(nn.Module):
         bob_cond_future_enc = self.bob_global_future_encoder(bob_future)
 
         spe = 0
+        if add_spe:
+            alice_spe = torch.norm(alice_hist, dim=-1)
+            bob_spe = torch.norm(bob_hist, dim=-1)
+            spe = torch.exp(-torch.cat([alice_spe, bob_spe], dim=1)).unsqueeze(2)
 
         encoder_output = torch.cat([alice_local_output, global_output+spe], dim=1)
 

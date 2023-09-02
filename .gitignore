@@ -12,3 +12,4 @@ amass/*
 logs*
 synthetic_amass
 cmu_mocap
+check*
