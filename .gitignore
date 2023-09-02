@@ -11,3 +11,4 @@ amass/*
 *.txt
 logs*
 synthetic_amass
+cmu_mocap

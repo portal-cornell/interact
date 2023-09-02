@@ -119,7 +119,5 @@ class Datasets(Dataset):
         # each element of the data list is of shape (sequence length, 25 joints, 3d)
         return self.data_lst[idx], self.other_lst[idx], self.is_reaching_lst[idx]
 
-
-
 if __name__ == "__main__":
     dataset = Datasets('./mocap_data', 10, 25, 25)

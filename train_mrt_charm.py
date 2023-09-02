@@ -17,10 +17,6 @@ from data import DATA, TESTDATA
 dataset = DATA()
 test_dataset = TESTDATA()
 
-from discriminator_data import D_DATA
-real_=D_DATA()
-
-
 def extract_histories(input_seq, human_idxs):
     return input_seq[:, human_idxs]
 
@@ -35,14 +31,7 @@ def forward_pass(model,alice_hist,bob_hist,bob_future,alice_idx,bob_idx,one_hist
 
     source_seq = input_[:,1:15,:]-input_[:,:14,:] # 14 displacements, as done in original code
     target_seq = dct.idct(input_[:,-1:,:]) # Alice's current position
-    # relevant_human_idxs = [alice_idx]
-    # if not ONE_HIST:
-    #     relevant_human_idxs.append(bob_idx)
-    # # TODO: Add MLP to project bob's joints into same embedding
-    # histories = extract_histories(input_seq, relevant_human_idxs) # batch, N_person, T_in (15), 45
 
-    # CONDITIONAL: Relative positions of Bob compared to a joint position at Alice's current timestep
-    # TODO: Use relevant joints for bob (that will be wrist and hand)
     cond_future = (bob_hist[:,:15,:]-target_seq[:,-1:,:])
     if not CONDITIONAL:
         cond_future.fill_(0)
@@ -123,34 +112,11 @@ def train_model(args):
 
             loss, results=compute_loss(model, input_seq_tmp, output_seq, alice_idx, bob_idx,
                                         ONE_HIST, CONDITIONAL, device)
-            
-            
-            
-            # if (j+1)%2==0:
-                
-            #     fake_motion=results
-
-            #     disc_loss=disc_l2_loss(discriminator(fake_motion))
-            #     loss=loss+0.0005*disc_loss
-                
-            #     fake_motion=fake_motion.detach()
-
-            #     real_motion=real_motion_all[int(j/2)][1][1][:,alice_idx]
-            #     real_motion=real_motion.view(-1,46,JOINT_AMT*3)[:,1:16,:].float().to(device)
-
-            #     fake_disc_value = discriminator(fake_motion)
-            #     real_disc_value = discriminator(real_motion)
-
-            #     d_motion_disc_real, d_motion_disc_fake, d_motion_disc_loss = adv_disc_l2_loss(real_disc_value, fake_disc_value)                
-        
+                    
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            # if (j + 1) %2 == 0:
-            #     optimizer_d.zero_grad()
-            #     d_motion_disc_loss.backward()
-            #     optimizer_d.step()
-    
+            
             total_loss=total_loss+loss
         
         """
