@@ -1,6 +1,7 @@
 ''' Define the Transformer model '''
 import torch
 import torch.nn as nn
+import torch_dct as dct
 import numpy as np
 from MRT.Layers import EncoderLayer, DecoderLayer
 import torch.nn.functional as F
@@ -130,13 +131,116 @@ class Decoder(nn.Module):
             return dec_output, dec_slf_attn_list, dec_enc_attn_list
         return dec_output, dec_enc_attn_list
 
+class ConditionalForecaster(nn.Module):
+    def __init__(
+            self, src_pad_idx=1, trg_pad_idx=1,
+            d_word_vec=64, d_model=64, d_inner=512,
+            n_layers=3, n_head=8, d_k=32, d_v=32, 
+            dropout=0.2, n_position=100, 
+            conditional_forecaster=False,
+            alice_joints_num = 9,
+            bob_joints_num = 9,
+            device='cuda'):
+    
+        super().__init__()
+        
+        self.device=device
+        
+        self.d_model=d_model
+        self.src_pad_idx, self.trg_pad_idx = src_pad_idx, trg_pad_idx
+
+        self.alice_local_hist_encoder=nn.Linear(alice_joints_num*3,d_model) 
+
+        self.alice_global_hist_encoder=nn.Linear(alice_joints_num*3,d_model)
+        self.bob_global_hist_encoder=nn.Linear(bob_joints_num*3,d_model) 
+
+        self.bob_global_future_encoder=nn.Linear(bob_joints_num*3,d_model) 
+        
+        self.decoder_linear = nn.Linear(d_model,d_model)
+        self.forecast_head=nn.Linear(d_model,alice_joints_num*3)
+
+        self.dropout = nn.Dropout(p=dropout)
+
+        self.encoder = Encoder(
+            n_position=n_position,
+            d_word_vec=d_word_vec, d_model=d_model, d_inner=d_inner,
+            n_layers=n_layers, n_head=n_head, d_k=d_k, d_v=d_v,
+            pad_idx=src_pad_idx, dropout=dropout, device=self.device)
+        
+        self.encoder_global = Encoder(
+            n_position=n_position,
+            d_word_vec=d_word_vec, d_model=d_model, d_inner=d_inner,
+            n_layers=n_layers, n_head=n_head, d_k=d_k, d_v=d_v,
+            pad_idx=src_pad_idx, dropout=dropout, device=self.device)
+
+        self.decoder = Decoder(
+            n_position=n_position,
+            d_word_vec=d_word_vec, d_model=d_model, d_inner=d_inner,
+            n_layers=n_layers, n_head=n_head, d_k=d_k, d_v=d_v,
+            pad_idx=trg_pad_idx, dropout=dropout, device=self.device)
+
+        for p in self.parameters():
+            if p.dim() > 1:
+                nn.init.xavier_uniform_(p) 
+
+        assert d_model == d_word_vec, \
+        'To facilitate the residual connections, \
+         the dimensions of all module outputs shall be the same.'
+    
+    def forward(self, 
+            alice_hist, 
+            bob_hist, 
+            bob_future,
+            common_joints, 
+            use=None, 
+            cond_future=None, 
+            bob_is_robot=False, 
+            one_hist=False):
+        ### This should be zero
+        alice_current_pos = alice_hist[:, -1, :].unsqueeze(1)
+        
+        ### local history encoding
+        alice_displacement = alice_hist[:,1:alice_hist.shape[1],:]-alice_hist[:,:alice_hist.shape[1]-1,:]                 
+        alice_displacement_dct = dct.dct(alice_displacement)
+        alice_local_enc = self.alice_local_hist_encoder(alice_displacement_dct)
+        alice_local_output, *_ = self.encoder(alice_local_enc, 1, None)
+
+        ### global history encoding
+        alice_global_enc = self.alice_global_hist_encoder(alice_hist)
+        if not one_hist:
+            bob_global_enc = self.bob_global_hist_encoder(bob_hist)
+            global_enc = torch.cat([alice_global_enc, bob_global_enc],dim=1)
+        else:
+            global_enc = alice_global_enc
+        global_output, *_ = self.encoder_global(global_enc,
+                    1 if one_hist else 2, 
+                    src_mask = None, 
+                    global_feature=True)
+
+        ### conditional future encoder
+        bob_cond_future_enc = self.bob_global_future_encoder(bob_future)
+
+        spe = 0
+
+        encoder_output = torch.cat([alice_local_output, global_output+spe], dim=1)
+
+        dec_output, dec_attention, *_ = self.decoder(bob_cond_future_enc, None, encoder_output, None)
+        dec_output = self.decoder_linear(dec_output)
+        alice_forecasts = self.forecast_head(dec_output)
+        
+        return alice_forecasts
+    
 class Transformer(nn.Module):
     ''' A sequence to sequence model with attention mechanism. '''
 
     def __init__(
             self, src_pad_idx=1, trg_pad_idx=1,
             d_word_vec=64, d_model=64, d_inner=512,
-            n_layers=3, n_head=8, d_k=32, d_v=32, dropout=0.2, n_position=100, conditional_forecaster=False,
+            n_layers=3, n_head=8, d_k=32, d_v=32, 
+            dropout=0.2, n_position=100, 
+            conditional_forecaster=False,
+            alice_joints_num = 9,
+            bob_joints_num = 9,
             device='cuda'):
 
         super().__init__()
@@ -210,8 +314,6 @@ class Transformer(nn.Module):
         dec_output=self.proj_inverse(dec_output)
               
         return dec_output
-
-    
 
     def forward(self, src_seq, trg_seq, alice_hist, bob_hist, common_joints, use=None, cond_future=None, bob_is_robot=False, one_hist=False):
         '''

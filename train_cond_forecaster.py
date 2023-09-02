@@ -4,7 +4,7 @@ import numpy as np
 import torch_dct as dct #https://github.com/zh217/torch-dct
 import time
 
-from MRT.Models import Transformer
+from MRT.Models import ConditionalForecaster
 from utils.loss_funcs import disc_l2_loss,adv_disc_l2_loss
 from torch.autograd import Variable
 import torch.nn as nn
@@ -36,7 +36,7 @@ if __name__ == "__main__":
                 batch_size=args.batch_size, 
                 shuffle=True)
 
-    model = Transformer(d_word_vec=128, d_model=128, d_inner=1024,
+    model = ConditionalForecaster(d_word_vec=128, d_model=128, d_inner=1024,
                 n_layers=3, n_head=8, d_k=64, d_v=64,
                 device=device,
                 conditional_forecaster=CONDITIONAL).to(device)
@@ -44,5 +44,30 @@ if __name__ == "__main__":
     params = [
         {"params": model.parameters(), "lr": args.lr_pred}
     ]
+
     optimizer = optim.Adam(params)
+
+    common_joints = range(9)
+    for epoch in range(args.epochs):
+        total_loss=0
+        
+        for j, batch in enumerate(train_dataloader):
+            offset = batch[0].reshape(batch[0].shape[0], 
+                                        batch[0].shape[1], -1)[:, -1].unsqueeze(1)
+            alice_hist, alice_fut, bob_hist, bob_fut = [b.reshape(b.shape[0], 
+                                        b.shape[1], -1) - offset for b in batch]
+            
+            alice_forecasts = model(alice_hist, bob_hist, bob_fut, common_joints)
+
+            diff = alice_forecasts-alice_fut
+            dist = torch.norm(diff.reshape(diff.shape[0], -1), dim=1)
+            loss = torch.mean(dist)
+            # import pdb; pdb.set_trace()
+                
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            
+            total_loss=total_loss+loss
+            print(loss)
     
