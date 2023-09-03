@@ -8,19 +8,18 @@ import numpy as np
 from pynput import keyboard
 import torch
 import torch_dct as dct
-from train_mrt_charm import extract_histories, forward_pass
 from MRT.Models import Transformer, ConditionalForecaster
 
 ONE_HIST = False
-CONDITIONAL = True
-device = 'cuda'
+CONDITIONAL = False
+device = 'cpu'
 model = ConditionalForecaster(d_word_vec=128, d_model=128, d_inner=1024,
             n_layers=3, n_head=8, d_k=64, d_v=64,device=device,conditional_forecaster=CONDITIONAL)
 model_id = f'{"1hist" if ONE_HIST else "2hist"}_{"marginal" if not CONDITIONAL else "conditional"}'
 directory = f'./saved_model_{model_id}'
-model.load_state_dict(torch.load(f'{directory}/49.model'))
-
-with open('mocap_mapping.json', 'r') as f:
+model.load_state_dict(torch.load(f'{directory}/2.model', map_location=torch.device('cpu')))
+model.eval()
+with open('mapping/mocap_mapping.json', 'r') as f:
         mapping = json.load(f)
 
 relevant_joints=['lowerneck', 'lclavicle', 'rclavicle',
@@ -62,22 +61,25 @@ def get_future(joint_data, current_idx, future_length=15, skip_rate = int(120/15
     return future_joints
 
 def get_forecast(alice_hist_raw, bob_hist_raw, alice_future_raw, bob_future_raw):
-    alice_hist = torch.Tensor(np.array(alice_hist_raw)[:,model_joints_idx]).reshape(len(alice_hist_raw),-1).unsqueeze(0).unsqueeze(0)
-    bob_hist = torch.Tensor(np.array(bob_hist_raw)[:,model_joints_idx]).reshape(len(bob_hist_raw),-1).unsqueeze(0).unsqueeze(0)
-    input_seq = torch.concat([alice_hist, bob_hist], dim=1)
+    alice_hist = torch.Tensor(np.array(alice_hist_raw)[:,model_joints_idx]).reshape(len(alice_hist_raw),-1).unsqueeze(0)
+    bob_hist = torch.Tensor(np.array(bob_hist_raw)[:,model_joints_idx]).reshape(len(bob_hist_raw),-1).unsqueeze(0)
 
-    alice_future = torch.Tensor(np.array(alice_future_raw)[:,model_joints_idx]).reshape(len(alice_future_raw),-1).unsqueeze(0).unsqueeze(0)
-    bob_future = torch.Tensor(np.array(bob_future_raw)[:,model_joints_idx]).reshape(len(bob_future_raw),-1).unsqueeze(0).unsqueeze(0)
-    output_seq = torch.cat([alice_future, bob_future], dim=1)
+    alice_future = torch.Tensor(np.array(alice_future_raw)[:,model_joints_idx]).reshape(len(alice_future_raw),-1).unsqueeze(0)
+    bob_future = torch.Tensor(np.array(bob_future_raw)[:,model_joints_idx]).reshape(len(bob_future_raw),-1).unsqueeze(0)
 
-    alice_idx = 0
-    bob_idx = 1
-
+    offset = alice_hist[:, -1, :].unsqueeze(1)
+    alice_hist = alice_hist-offset
+    bob_hist = bob_hist-offset
+    bob_future = bob_future-offset
     with torch.no_grad():
-        rec, results = forward_pass(model, input_seq, output_seq, alice_idx, bob_idx, ONE_HIST, CONDITIONAL)
+        results = model(alice_hist, bob_hist, bob_future, one_hist=ONE_HIST, cond_future=CONDITIONAL)
     # import pdb; pdb.set_trace()
+    results = results + offset
     alice_future_raw = np.array(alice_future_raw)
+    alice_hist_raw = np.array(alice_hist_raw)
     alice_future_raw[:,model_joints_idx,:] = results.reshape(15, 9, 3)
+    # import pdb; pdb.set_trace()
+    alice_future_raw[:, 7:9, :] = alice_hist_raw[-1:, 7:9, :]
     return alice_future_raw[:,:,:]
 
 
@@ -207,7 +209,7 @@ if __name__ == "__main__":
     prev_time = time.time()
     for timestep in range(len(joint_data_B)):
         # print(round(timestep/120, 1))
-        print(time.time()-prev_time)
+        # print(time.time()-prev_time)
         prev_time = time.time()
         if not pause and listener.running:
             current_joints_A = get_relevant_joints(joint_data_A[timestep])
