@@ -6,7 +6,7 @@ import numpy as np
 from pynput import keyboard
 import argparse
 
-with open('amass_mapping.json', 'r') as f:
+with open('mapping/amass_mapping.json', 'r') as f:
         mapping = json.load(f)
 
 relevant_joints=['Neck', 'L_Shoulder', 'R_Shoulder',
@@ -106,7 +106,7 @@ if __name__ == '__main__':
     parser.add_argument('--ep_num',type=str,default="0",help="episode number of their interaction")
     args = parser.parse_args()
 
-    episode_file = f"./synthetic_amass/{args.ep_num}.json"
+    episode_file = f"./new_amass/{args.ep_num}.json"
     with open(episode_file, 'r') as f:
         data = json.load(f)
 

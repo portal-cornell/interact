@@ -61,17 +61,19 @@ for split in ['train', 'val', 'test']:
                 trans = trans[fidxs]
                 poses = torch.from_numpy(poses).float()
                 poses = poses.reshape([fn, -1, 3])
-                # poses[:, 0:, 0] = np.expand_dims(trans, 1)
-                # import pdb; pdb.set_trace()
-                # poses[:, 0] = torch.from_numpy(trans).float()
+                trans = torch.from_numpy(trans).float()
+                
+                global_orient = poses[:, :1]
+                rot_matrix = rodrigues(global_orient)
+                trans_rot = torch.matmul(trans.unsqueeze(1),rot_matrix)
+
                 poses[:, 0] = 0
                 p3d0_tmp = p3d0.repeat([fn, 1, 1])
                 p3d_human = ang2joint(p3d0_tmp, poses, parent)
                 
+                p3d_human += trans_rot
                 alice_poses.append(p3d_human.numpy())
                 lengths.append(p3d_human.shape[0])
-            # if len(alice_poses)>100:
-            #     break
 
     max_length = np.max(np.array(lengths))
     bob_poses = []

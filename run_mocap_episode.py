@@ -17,7 +17,7 @@ model = ConditionalForecaster(d_word_vec=128, d_model=128, d_inner=1024,
             n_layers=3, n_head=8, d_k=64, d_v=64,device=device,conditional_forecaster=CONDITIONAL)
 model_id = f'{"1hist" if ONE_HIST else "2hist"}_{"marginal" if not CONDITIONAL else "conditional"}'
 directory = f'./saved_model_{model_id}'
-model.load_state_dict(torch.load(f'{directory}/2.model', map_location=torch.device('cpu')))
+model.load_state_dict(torch.load(f'{directory}/10.model', map_location=torch.device('cpu')))
 model.eval()
 with open('mapping/mocap_mapping.json', 'r') as f:
         mapping = json.load(f)
