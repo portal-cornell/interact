@@ -17,11 +17,16 @@ from utils.cmu_mocap import CMU_Mocap
 from utils.synthetic_amass import Synthetic_AMASS
 from torch.utils.data import ConcatDataset, DataLoader
 
-def get_dataloader(split='train', batch_size=256):
+def get_dataloader(split='train', batch_size=256, include_amass=True, include_CMU_mocap=True):
     cmu_mocap = CMU_Mocap(split=split)
-    synthetic_amass= Synthetic_AMASS(split=split)
-    dataset = ConcatDataset([cmu_mocap, 
-                    synthetic_amass])
+    if include_amass:
+        synthetic_amass= Synthetic_AMASS(split=split)
+        if include_CMU_mocap:
+            dataset = ConcatDataset([cmu_mocap, synthetic_amass])
+        else:
+            dataset = synthetic_amass
+    else:
+        dataset = cmu_mocap
     dataloader = DataLoader(dataset, 
                 batch_size=batch_size, 
                 shuffle=True if split == 'train' else False)
@@ -43,7 +48,6 @@ def log_metrics(dataloader, split, writer, epoch):
                                         batch[0].shape[1], -1)[:, -1].unsqueeze(1)
             alice_hist, alice_fut, bob_hist, bob_fut = [(b.reshape(b.shape[0], 
                                         b.shape[1], -1) - offset).to(device) for b in batch]
-            
             alice_forecasts = model(alice_hist, bob_hist, bob_fut)
 
             loss = mpjpe_loss(alice_forecasts, alice_fut)
@@ -63,25 +67,29 @@ if __name__ == "__main__":
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     model_id = f'{"1hist" if ONE_HIST else "2hist"}_{"marginal" if not CONDITIONAL else "conditional"}'
+    model_id += f'_{"noAMASS" if args.no_amass else "withAMASS"}_{"handwrist" if args.bob_hand else "alljoints"}'
     writer = SummaryWriter(log_dir=args.log_dir+'/'+model_id)
-
-    train_dataloader = get_dataloader(split='train', batch_size=args.batch_size)
-    val_dataloader = get_dataloader(split='val', batch_size=args.batch_size)
-    test_dataloader = get_dataloader(split='test', batch_size=args.batch_size)
+    
+    train_dataloader = get_dataloader(split='train', batch_size=args.batch_size, include_amass=(not args.no_amass))
+    val_dataloader = get_dataloader(split='val', batch_size=args.batch_size, include_amass=True, include_CMU_mocap=False)
+    test_dataloader = get_dataloader(split='test', batch_size=args.batch_size, include_amass=False, include_CMU_mocap=True)
+    bob_joints_list = list(range(9)) if not args.bob_hand else list(range(5,9))
 
     model = ConditionalForecaster(d_word_vec=128, d_model=128, d_inner=1024,
                 n_layers=3, n_head=8, d_k=64, d_v=64,
                 device=device,
-                conditional_forecaster=CONDITIONAL).to(device)
+                conditional_forecaster=CONDITIONAL,
+                bob_joints_list=bob_joints_list,
+                bob_joints_num=len(bob_joints_list)).to(device)
 
     params = [
         {"params": model.parameters(), "lr": args.lr_pred}
     ]
 
-    optimizer = optim.Adam(params)
-    # scheduler = optim.lr_scheduler.MultiStepLR(optimizer, 
-    #             milestones=[15,25,35,40], 
-    #             gamma=0.1)
+    optimizer = optim.Adam(params,weight_decay=1e-05)
+    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, 
+                milestones=[15,25,35,40], 
+                gamma=0.1)
 
     directory = f'./saved_model_{model_id}'
     pathlib.Path(directory).mkdir(parents=True, exist_ok=True)
@@ -117,5 +125,5 @@ if __name__ == "__main__":
         
         save_path=f'{directory}/{epoch+1}.model'
         torch.save(model.state_dict(),save_path)
-        # scheduler.step()
+        scheduler.step()
     

@@ -139,10 +139,20 @@ class ConditionalForecaster(nn.Module):
             dropout=0.2, n_position=100, 
             conditional_forecaster=False,
             alice_joints_num = 9,
+            bob_joints_list = None,
             bob_joints_num = 9,
             device='cuda'):
     
         super().__init__()
+        self.conditional_forecaster = conditional_forecaster
+        self.bob_joint_indices = None
+        if bob_joints_list is not None:
+            joint_idx_size = len(bob_joints_list) * 3
+            bob_joint_indices = np.zeros(joint_idx_size, dtype=int)
+            for i, value in enumerate(bob_joints_list):
+                for j in range(3):
+                    bob_joint_indices[i*3+j] = value*3 + j
+            self.bob_joint_indices = bob_joint_indices
         
         self.device=device
         
@@ -192,11 +202,15 @@ class ConditionalForecaster(nn.Module):
             bob_hist, 
             bob_future,
             add_spe=True, 
-            cond_future=None, 
             bob_is_robot=False, 
-            one_hist=False):
+            one_hist=False,):
         ### This should be zero
         alice_current_pos = alice_hist[:, -1, :].unsqueeze(1)
+
+        ### Index out bob's relevant joints
+        if self.bob_joint_indices is not None:
+            bob_future = bob_future[:,:,self.bob_joint_indices]
+            bob_hist = bob_hist[:,:,self.bob_joint_indices]
         
         ### local history encoding
         alice_displacement = alice_hist[:,1:alice_hist.shape[1],:]-alice_hist[:,:alice_hist.shape[1]-1,:]                 
@@ -217,6 +231,8 @@ class ConditionalForecaster(nn.Module):
                     global_feature=True)
 
         ### conditional future encoder
+        if not self.conditional_forecaster:
+            bob_future.fill_(0)
         bob_cond_future_enc = self.bob_global_future_encoder(bob_future)
 
         spe = 0
