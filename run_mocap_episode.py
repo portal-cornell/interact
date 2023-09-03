@@ -9,12 +9,12 @@ from pynput import keyboard
 import torch
 import torch_dct as dct
 from train_mrt_charm import extract_histories, forward_pass
-from MRT.Models import Transformer
+from MRT.Models import Transformer, ConditionalForecaster
 
 ONE_HIST = False
 CONDITIONAL = True
 device = 'cuda'
-model = Transformer(d_word_vec=128, d_model=128, d_inner=1024,
+model = ConditionalForecaster(d_word_vec=128, d_model=128, d_inner=1024,
             n_layers=3, n_head=8, d_k=64, d_v=64,device=device,conditional_forecaster=CONDITIONAL)
 model_id = f'{"1hist" if ONE_HIST else "2hist"}_{"marginal" if not CONDITIONAL else "conditional"}'
 directory = f'./saved_model_{model_id}'

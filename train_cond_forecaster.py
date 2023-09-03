@@ -83,6 +83,9 @@ if __name__ == "__main__":
     #             milestones=[15,25,35,40], 
     #             gamma=0.1)
 
+    directory = f'./saved_model_{model_id}'
+    pathlib.Path(directory).mkdir(parents=True, exist_ok=True)
+
     for epoch in range(args.epochs):
         total_loss, n=0, 0
         model.train()
@@ -109,5 +112,10 @@ if __name__ == "__main__":
 
         log_metrics(val_dataloader, 'val', writer, epoch)
         log_metrics(test_dataloader, 'test', writer, epoch)
+
+        # if (epoch+1)%5==0:
+        
+        save_path=f'{directory}/{epoch+1}.model'
+        torch.save(model.state_dict(),save_path)
         # scheduler.step()
     
