@@ -7,19 +7,16 @@ import numpy as np
 
 
 
-def mpjpe_error(batch_pred,batch_gt): 
+def mpjpe_loss(pred, output):
+    diff = pred-output
+    dist = torch.norm(diff.reshape(diff.shape[0], diff.shape[1], -1, 3), dim=-1)
+    loss = torch.mean(dist.reshape(dist.shape[0], -1))
+    return loss
 
-    batch_pred=batch_pred.contiguous().view(-1,3)
-    batch_gt=batch_gt.contiguous().view(-1,3)
-
-    return torch.mean(torch.norm(batch_gt-batch_pred,2,1))
-
-def fde_error(batch_pred,batch_gt): 
-
-    batch_pred=batch_pred[:,-1,:,:].contiguous().view(-1,3)
-    batch_gt=batch_gt[:,-1,:,:].contiguous().view(-1,3)
-
-    return torch.mean(torch.norm(batch_gt-batch_pred,2,1))
+def fde_error(pred, output): 
+    pred_last_step = pred[:,-1:]
+    output_last_step = output[:,-1:]
+    return mpjpe_loss(pred_last_step, output_last_step)
 
 def weighted_mpjpe_error(batch_pred,batch_gt, joint_weights): 
     # 'BackTop', 'LShoulderBack', 'RShoulderBack',
@@ -31,12 +28,16 @@ def weighted_mpjpe_error(batch_pred,batch_gt, joint_weights):
     all_joints_error = (torch.norm(diff.view(-1,3),2,1)).view(batch_pred.shape[0], -1)
     return torch.mean(all_joints_error, dim=1)
 
-def perjoint_error(batch_pred, batch_gt):
-    batch_pred = batch_pred.contiguous()
-    batch_gt=batch_gt.contiguous()
-    diff = batch_gt - batch_pred
-    batch_joint_errors = torch.mean(torch.norm(diff,2,3), 1)
-    return torch.mean(batch_joint_errors,0)
+def perjoint_error(pred, output):
+    diff = pred-output
+    dist = torch.norm(diff.reshape(diff.shape[0], diff.shape[1], -1, 3), dim=-1)
+    loss = torch.mean(dist, dim=1)
+    return torch.mean(loss,0), loss
+
+def perjoint_fde(pred, output):
+    pred_last_step = pred[:,-1:]
+    output_last_step = output[:,-1:]
+    return perjoint_error(pred_last_step, output_last_step) 
     
 def euler_error(ang_pred, ang_gt):
 

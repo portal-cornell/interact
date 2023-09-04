@@ -1,4 +1,19 @@
-python train_mrt_charm.py --one-hist --log-dir=./logs_amass
-python train_cond_forecaster.py --one-hist -c --no-amass --bob-hand --log-dir=./logs_tmp
-python train_mrt_charm.py --log-dir=./logs_amass
-python train_mrt_charm.py -c --log-dir=./logs_amass
+combinations=(
+    "-c --bob-hand"
+    "-c"
+    "--bob-hand"
+    ""
+    "--one-hist -c --bob-hand"
+    "--one-hist -c"
+    "--one-hist --bob-hand"
+    "--one-hist"
+)
+
+for args in "${combinations[@]}"; do
+    python train_cond_forecaster.py --log-dir=./logs_modes $args
+done
+
+
+
+
+

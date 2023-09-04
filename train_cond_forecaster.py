@@ -5,7 +5,7 @@ import torch_dct as dct #https://github.com/zh217/torch-dct
 import time
 
 from MRT.Models import ConditionalForecaster
-from utils.loss_funcs import disc_l2_loss,adv_disc_l2_loss
+from utils.loss_funcs import mpjpe_loss,disc_l2_loss,adv_disc_l2_loss
 from torch.autograd import Variable
 import torch.nn as nn
 from torch.nn import init
@@ -17,26 +17,33 @@ from utils.cmu_mocap import CMU_Mocap
 from utils.synthetic_amass import Synthetic_AMASS
 from torch.utils.data import ConcatDataset, DataLoader
 
+dataset_map = {
+    'CMU-Mocap' : {
+        'train': CMU_Mocap(split='train'),
+        'val': CMU_Mocap(split='val'),
+        'test': CMU_Mocap(split='test'),
+    },
+    'AMASS' : {
+        'train': Synthetic_AMASS(split='train'),
+        'val': Synthetic_AMASS(split='val'),
+        'test': Synthetic_AMASS(split='test'),
+    }
+}
+
 def get_dataloader(split='train', batch_size=256, include_amass=True, include_CMU_mocap=True):
-    cmu_mocap = CMU_Mocap(split=split)
+    # cmu_mocap = CMU_Mocap(split=split)
     if include_amass:
-        synthetic_amass= Synthetic_AMASS(split=split)
+        # synthetic_amass= Synthetic_AMASS(split=split)
         if include_CMU_mocap:
-            dataset = ConcatDataset([cmu_mocap, synthetic_amass])
+            dataset = ConcatDataset([dataset_map['CMU-Mocap'][split], dataset_map['AMASS'][split]])
         else:
-            dataset = synthetic_amass
+            dataset = dataset_map['AMASS'][split]
     else:
-        dataset = cmu_mocap
+        dataset = dataset_map['CMU-Mocap'][split]
     dataloader = DataLoader(dataset, 
                 batch_size=batch_size, 
                 shuffle=True if split == 'train' else False)
     return dataloader
-
-def mpjpe_loss(pred, output):
-    diff = pred-output
-    dist = torch.norm(diff.reshape(diff.shape[0], diff.shape[1], -1, 3), dim=-1)
-    loss = torch.mean(dist.reshape(dist.shape[0], -1))
-    return loss
 
 def log_metrics(dataloader, split, writer, epoch):
     total_loss, n=0, 0
@@ -71,8 +78,10 @@ if __name__ == "__main__":
     writer = SummaryWriter(log_dir=args.log_dir+'/'+model_id)
     
     train_dataloader = get_dataloader(split='train', batch_size=args.batch_size, include_amass=(not args.no_amass))
-    val_dataloader = get_dataloader(split='val', batch_size=args.batch_size, include_amass=True, include_CMU_mocap=False)
-    test_dataloader = get_dataloader(split='test', batch_size=args.batch_size, include_amass=False, include_CMU_mocap=True)
+    val_dataloader = get_dataloader(split='val', batch_size=args.batch_size, include_amass=True, include_CMU_mocap=True)
+    test_dataloader = get_dataloader(split='test', batch_size=args.batch_size, include_amass=True, include_CMU_mocap=True)
+    amass_dataloader = get_dataloader(split='test', batch_size=args.batch_size, include_amass=True, include_CMU_mocap=False)
+    cmu_mocap_dataloader = get_dataloader(split='test', batch_size=args.batch_size, include_amass=False, include_CMU_mocap=True)
     bob_joints_list = list(range(9)) if not args.bob_hand else list(range(5,9))
 
     model = ConditionalForecaster(d_word_vec=128, d_model=128, d_inner=1024,
@@ -91,7 +100,7 @@ if __name__ == "__main__":
                 milestones=[15,25,35,40], 
                 gamma=0.1)
 
-    directory = f'./saved_model_{model_id}'
+    directory = f'./checkpoints/saved_model_{model_id}'
     pathlib.Path(directory).mkdir(parents=True, exist_ok=True)
 
     for epoch in range(args.epochs):
@@ -120,6 +129,8 @@ if __name__ == "__main__":
 
         log_metrics(val_dataloader, 'val', writer, epoch)
         log_metrics(test_dataloader, 'test', writer, epoch)
+        log_metrics(amass_dataloader, 'amass_test', writer, epoch)
+        log_metrics(cmu_mocap_dataloader, 'cmu_mocap_test', writer, epoch)
 
         # if (epoch+1)%5==0:
         

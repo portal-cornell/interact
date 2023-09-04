@@ -3,7 +3,7 @@ saved_model*
 all_asfamc
 *.npy
 *.csv
-comad*
+comad_data/*
 view_npy.py
 amass/*
 *body_models*
