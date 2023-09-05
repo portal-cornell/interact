@@ -15,14 +15,16 @@ from torch.utils.tensorboard import SummaryWriter
 
 from utils.cmu_mocap import CMU_Mocap
 from utils.synthetic_amass import Synthetic_AMASS
+from utils.comad import CoMaD
 from torch.utils.data import ConcatDataset, DataLoader
 
 dataset_map = {
     'CMU-Mocap' : {},
-    'AMASS' : {}
+    'AMASS' : {},
+    'COMAD' : {}
 }
 
-def get_dataloader(split='train', batch_size=256, include_amass=True, include_CMU_mocap=True):
+def get_dataloader(split='train', batch_size=256, include_amass=True, include_CMU_mocap=True, include_COMAD=False):
     datalst = []
     if include_CMU_mocap:
         if split not in dataset_map['CMU-Mocap']:
@@ -32,6 +34,10 @@ def get_dataloader(split='train', batch_size=256, include_amass=True, include_CM
         if split not in dataset_map['AMASS']:
             dataset_map['AMASS'][split] = Synthetic_AMASS(split=split)
         datalst.append(dataset_map['AMASS'][split])
+    if include_COMAD:
+        if split not in dataset_map['COMAD']:
+            dataset_map['COMAD'][split] = CoMaD(split=split)
+        datalst.append(dataset_map['COMAD'][split])
     dataset = ConcatDataset(datalst)
     dataloader = DataLoader(dataset, 
                 batch_size=batch_size, 
@@ -56,6 +62,9 @@ def log_metrics(dataloader, split, writer, epoch):
             n+=batch_dim
     
     print(f"{split} loss after epoch {epoch+1} = ", total_loss.item()/n)
+    print(f"{split} mpjpe after epoch {epoch+1} = ", total_loss.item()/n)
+
+    writer.add_scalar(f'{split}/loss', total_loss.item()/n, epoch+1)
     writer.add_scalar(f'{split}/mpjpe', total_loss.item()/n, epoch+1)
 
 if __name__ == "__main__":
@@ -68,13 +77,17 @@ if __name__ == "__main__":
 
     model_id = f'{"1hist" if ONE_HIST else "2hist"}_{"marginal" if not CONDITIONAL else "conditional"}'
     model_id += f'_{"noAMASS" if args.no_amass else "withAMASS"}_{"handwrist" if args.bob_hand else "alljoints"}'
+    load_model_id = model_id[:]
+    model_id += '_ft'
     writer = SummaryWriter(log_dir=args.log_dir+'/'+model_id)
     
-    train_dataloader = get_dataloader(split='train', batch_size=args.batch_size, include_amass=(not args.no_amass))
-    val_dataloader = get_dataloader(split='val', batch_size=args.batch_size, include_amass=True, include_CMU_mocap=True)
-    test_dataloader = get_dataloader(split='test', batch_size=args.batch_size, include_amass=True, include_CMU_mocap=True)
-    amass_dataloader = get_dataloader(split='test', batch_size=args.batch_size, include_amass=True, include_CMU_mocap=False)
+    train_dataloader = get_dataloader(split='train', batch_size=args.batch_size, include_amass=False, include_CMU_mocap=False, include_COMAD=True)
+    # val_dataloader = get_dataloader(split='val', batch_size=args.batch_size, include_amass=(not args.no_amass), include_CMU_mocap=True)
+    # test_dataloader = get_dataloader(split='test', batch_size=args.batch_size, include_amass=(not args.no_amass), include_CMU_mocap=True)
+    # amass_dataloader = get_dataloader(split='test', batch_size=args.batch_size, include_amass=True, include_CMU_mocap=False)
     cmu_mocap_dataloader = get_dataloader(split='test', batch_size=args.batch_size, include_amass=False, include_CMU_mocap=True)
+    comad_val_dataloader = get_dataloader(split='val', batch_size=args.batch_size, include_amass=False, include_CMU_mocap=False, include_COMAD=True)
+    comad_test_dataloader = get_dataloader(split='test', batch_size=args.batch_size, include_amass=False, include_CMU_mocap=False, include_COMAD=True)
     bob_joints_list = list(range(9)) if not args.bob_hand else list(range(5,9))
 
     model = ConditionalForecaster(d_word_vec=128, d_model=128, d_inner=1024,
@@ -85,8 +98,10 @@ if __name__ == "__main__":
                 bob_joints_num=len(bob_joints_list),
                 one_hist=ONE_HIST).to(device)
 
+    model.load_state_dict(torch.load(f'./checkpoints_new/saved_model_{load_model_id}/{50}.model'))
+
     params = [
-        {"params": model.parameters(), "lr": args.lr_pred}
+        {"params": model.parameters(), "lr": args.lr_ft}
     ]
 
     optimizer = optim.Adam(params,weight_decay=1e-05)
@@ -94,11 +109,11 @@ if __name__ == "__main__":
                 milestones=[15,25,35,40], 
                 gamma=0.1)
 
-    directory = f'./checkpoints_new/saved_model_{model_id}'
+    directory = f'./checkpoints_trans_finetune/saved_model_{model_id}'
     pathlib.Path(directory).mkdir(parents=True, exist_ok=True)
 
     for epoch in range(args.epochs):
-        total_loss, n=0, 0
+        total_loss, total_mpjpe, n = 0, 0, 0
         model.train()
         for j, batch in enumerate(train_dataloader):
             offset = batch[0].reshape(batch[0].shape[0], 
@@ -117,14 +132,17 @@ if __name__ == "__main__":
             n+=batch_dim
 
         print(f"train loss after epoch {epoch+1} = ", total_loss.item()/n)
+        print(f"train mpjpe after epoch {epoch+1} = ", total_loss.item()/n)
+        writer.add_scalar('train/loss', total_loss.item()/n, epoch+1)
         writer.add_scalar('train/mpjpe', total_loss.item()/n, epoch+1)
 
-        log_metrics(val_dataloader, 'val', writer, epoch)
-        log_metrics(test_dataloader, 'test', writer, epoch)
-        log_metrics(amass_dataloader, 'amass_test', writer, epoch)
-        log_metrics(cmu_mocap_dataloader, 'cmu_mocap_test', writer, epoch)
-
-        # if (epoch+1)%5==0:
+        # log_metrics(val_dataloader, 'val', writer, epoch)
+        # log_metrics(test_dataloader, 'test', writer, epoch)
+        # log_metrics(amass_dataloader, 'amass_test', writer, epoch)
+        if (epoch+1)%3 == 0:
+            log_metrics(cmu_mocap_dataloader, 'cmu_mocap_test', writer, epoch)
+            log_metrics(comad_val_dataloader, 'comad_val', writer, epoch)
+            log_metrics(comad_test_dataloader, 'comad_test', writer, epoch)
         
         save_path=f'{directory}/{epoch+1}.model'
         torch.save(model.state_dict(),save_path)

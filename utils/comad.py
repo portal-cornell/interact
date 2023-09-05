@@ -36,7 +36,7 @@ class CoMaD(Dataset):
         self.output_n = output_n
 
         joint_names = ['BackTop', 'LShoulderBack', 'RShoulderBack',
-                        'LElbowOut', 'RElbowOut', 'LWristOut',
+                        'LElbowOut', 'RElbowOut', 'LWristOut', 'RWristOut',
                         'LHandOut', 'RHandOut']
 
         mapping = read_json(self.mapping_json)
@@ -46,7 +46,10 @@ class CoMaD(Dataset):
     def add_comad_dataset(self):
         for episode in os.listdir(f'{self.data_dir}/{self.split}'):
             print(f'Episode: {self.data_dir}/{self.split}/{episode}')
-            json_data = read_json(f'{self.data_dir}/{self.split}/{episode}')
+            try:
+                json_data = read_json(f'{self.data_dir}/{self.split}/{episode}')
+            except:
+                continue
 
             downsample_rate = self.sample_rate // self.output_rate
             # TODO: Change this to use metadata to figure out who Alice and Bob are

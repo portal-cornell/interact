@@ -207,7 +207,7 @@ class ConditionalForecaster(nn.Module):
             bob_is_robot=False):
         ### This should be zero
         alice_current_pos = alice_hist[:, -1, :].unsqueeze(1)
-
+        
         ### Index out bob's relevant joints
         if self.bob_joint_indices is not None:
             bob_future = bob_future[:,:,self.bob_joint_indices]
