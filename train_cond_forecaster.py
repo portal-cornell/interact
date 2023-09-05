@@ -100,7 +100,7 @@ if __name__ == "__main__":
                 milestones=[15,25,35,40], 
                 gamma=0.1)
 
-    directory = f'./checkpoints/saved_model_{model_id}'
+    directory = f'./checkpoints_new/saved_model_{model_id}'
     pathlib.Path(directory).mkdir(parents=True, exist_ok=True)
 
     for epoch in range(args.epochs):

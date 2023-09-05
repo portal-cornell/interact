@@ -18,7 +18,9 @@ with open(mapping_file, 'r') as f:
 
 ### Define models we want to compute metrics for
 models = ["saved_model_2hist_conditional_withAMASS_alljoints",
-          "saved_model_2hist_conditional_withAMASS_handwrist"]
+          "saved_model_2hist_conditional_withAMASS_handwrist",
+          "saved_model_2hist_marginal_withAMASS_alljoints",
+          "saved_model_2hist_marginal_withAMASS_handwrist"]
 
 if __name__ == '__main__':
     args = get_parser().parse_args()
@@ -38,7 +40,7 @@ if __name__ == '__main__':
                 device='cpu',
                 conditional_forecaster='conditional' in model_path,
                 bob_joints_list=bob_joints_list,
-                bob_joints_num=len(bob_joints_list)).to('cpu')
+                bob_joints_num=len(bob_joints_list)).to('cuda')
 
         ### Load state dict of that model
         # if model_path == "current" or model_path == "cvm":
@@ -47,7 +49,7 @@ if __name__ == '__main__':
         #     args.prediction_method = model_path
         # else:
         args.prediction_method = "neural"
-        model.load_state_dict(torch.load(f'./checkpoints/{model_path}/{50}.model'))
+        model.load_state_dict(torch.load(f'./checkpoints/{model_path}/{40}.model'))
         model.eval()
 
         ### Set up metrics we want to compute
@@ -61,11 +63,12 @@ if __name__ == '__main__':
         n=0
         with torch.no_grad():
             for cnt,batch in enumerate(loader_test): 
+                print(cnt)
                 # Match forward pass at train time
                 offset = batch[0].reshape(batch[0].shape[0], 
                                         batch[0].shape[1], -1)[:, -1].unsqueeze(1)
                 alice_hist, alice_fut, bob_hist, bob_fut = [(b.reshape(b.shape[0], 
-                                            b.shape[1], -1) - offset).to('cpu') for b in batch]
+                                            b.shape[1], -1) - offset).to('cuda') for b in batch]
                 batch_dim = alice_hist.shape[0]
                 n += batch_dim
                 if args.prediction_method == "neural":
@@ -73,6 +76,7 @@ if __name__ == '__main__':
                 # elif args.prediction_method == "current":
                 # elif args.prediction_method == "cvm":
                 
+                # import pdb; pdb.set_trace()
                 ### Compute the different losses to report
                 loss = mpjpe_loss(alice_forecasts, alice_fut)
                 per_joint_error, per_joint_error_list = perjoint_error(alice_forecasts, alice_fut)
