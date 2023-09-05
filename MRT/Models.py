@@ -237,8 +237,8 @@ class ConditionalForecaster(nn.Module):
 
         spe = 0
         if add_spe:
-            alice_spe = torch.norm(alice_hist, dim=-1)
-            bob_spe = torch.norm(bob_hist, dim=-1)
+            alice_spe = torch.norm(alice_hist-alice_hist[:, -1].unsqueeze(1), dim=-1)
+            bob_spe = torch.norm(bob_hist-alice_hist[:, -1, self.bob_joint_indices].unsqueeze(1), dim=-1)
             spe = torch.exp(-torch.cat([alice_spe, bob_spe], dim=1)).unsqueeze(2)
 
         encoder_output = torch.cat([alice_local_output, global_output+spe], dim=1)
