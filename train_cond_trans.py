@@ -77,7 +77,7 @@ def log_metrics(dataloader, split, writer, epoch):
 
 def get_translation_joint(joint_data):
     translation_joint = joint_data.mean(dim=2).unsqueeze(2)
-    joint_data = torch.cat([translation_joint, joint_data], dim=2)
+    joint_data = torch.cat([translation_joint, joint_data-translation_joint], dim=2)
     return joint_data.reshape(joint_data.shape[0], joint_data.shape[1], -1)
 
 def add_translation_joint(alice_hist, alice_fut, bob_hist, bob_fut):
@@ -113,8 +113,8 @@ if __name__ == "__main__":
     train_dataloader = get_dataloader(split='train', batch_size=args.batch_size, include_amass=(not args.no_amass))
     val_dataloader = get_dataloader(split='val', batch_size=args.batch_size, include_amass=(not args.no_amass), include_CMU_mocap=True)
     test_dataloader = get_dataloader(split='test', batch_size=args.batch_size, include_amass=(not args.no_amass), include_CMU_mocap=True)
-    # amass_dataloader = get_dataloader(split='test', batch_size=args.batch_size, include_amass=True, include_CMU_mocap=False)
-    # cmu_mocap_dataloader = get_dataloader(split='test', batch_size=args.batch_size, include_amass=False, include_CMU_mocap=True)
+    amass_dataloader = get_dataloader(split='test', batch_size=args.batch_size, include_amass=True, include_CMU_mocap=False)
+    cmu_mocap_dataloader = get_dataloader(split='test', batch_size=args.batch_size, include_amass=False, include_CMU_mocap=True)
     bob_joints_list = list(range(10)) if not args.bob_hand else [0,6,7,8,9]
 
     model = ConditionalForecaster(d_word_vec=128, d_model=128, d_inner=1024,
