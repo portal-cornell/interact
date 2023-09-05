@@ -18,28 +18,21 @@ from utils.synthetic_amass import Synthetic_AMASS
 from torch.utils.data import ConcatDataset, DataLoader
 
 dataset_map = {
-    'CMU-Mocap' : {
-        'train': CMU_Mocap(split='train'),
-        'val': CMU_Mocap(split='val'),
-        'test': CMU_Mocap(split='test'),
-    },
-    'AMASS' : {
-        'train': Synthetic_AMASS(split='train'),
-        'val': Synthetic_AMASS(split='val'),
-        'test': Synthetic_AMASS(split='test'),
-    }
+    'CMU-Mocap' : {},
+    'AMASS' : {}
 }
 
 def get_dataloader(split='train', batch_size=256, include_amass=True, include_CMU_mocap=True):
-    # cmu_mocap = CMU_Mocap(split=split)
+    datalst = []
+    if include_CMU_mocap:
+        if split not in dataset_map['CMU-Mocap']:
+            dataset_map['CMU-Mocap'][split] = CMU_Mocap(split=split)
+        datalst.append(dataset_map['CMU-Mocap'][split])
     if include_amass:
-        # synthetic_amass= Synthetic_AMASS(split=split)
-        if include_CMU_mocap:
-            dataset = ConcatDataset([dataset_map['CMU-Mocap'][split], dataset_map['AMASS'][split]])
-        else:
-            dataset = dataset_map['AMASS'][split]
-    else:
-        dataset = dataset_map['CMU-Mocap'][split]
+        if split not in dataset_map['AMASS']:
+            dataset_map['AMASS'][split] = Synthetic_AMASS(split=split)
+        datalst.append(dataset_map['AMASS'][split])
+    dataset = ConcatDataset(datalst)
     dataloader = DataLoader(dataset, 
                 batch_size=batch_size, 
                 shuffle=True if split == 'train' else False)
@@ -89,7 +82,8 @@ if __name__ == "__main__":
                 device=device,
                 conditional_forecaster=CONDITIONAL,
                 bob_joints_list=bob_joints_list,
-                bob_joints_num=len(bob_joints_list)).to(device)
+                bob_joints_num=len(bob_joints_list),
+                one_hist=ONE_HIST).to(device)
 
     params = [
         {"params": model.parameters(), "lr": args.lr_pred}

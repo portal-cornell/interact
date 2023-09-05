@@ -141,10 +141,12 @@ class ConditionalForecaster(nn.Module):
             alice_joints_num = 9,
             bob_joints_list = None,
             bob_joints_num = 9,
+            one_hist = False,
             device='cuda'):
     
         super().__init__()
         self.conditional_forecaster = conditional_forecaster
+        self.one_hist = one_hist
         self.bob_joint_indices = None
         if bob_joints_list is not None:
             joint_idx_size = len(bob_joints_list) * 3
@@ -202,8 +204,7 @@ class ConditionalForecaster(nn.Module):
             bob_hist, 
             bob_future,
             add_spe=True, 
-            bob_is_robot=False, 
-            one_hist=False,):
+            bob_is_robot=False):
         ### This should be zero
         alice_current_pos = alice_hist[:, -1, :].unsqueeze(1)
 
@@ -220,13 +221,13 @@ class ConditionalForecaster(nn.Module):
 
         ### global history encoding
         alice_global_enc = self.alice_global_hist_encoder(alice_hist)
-        if not one_hist:
+        if not self.one_hist:
             bob_global_enc = self.bob_global_hist_encoder(bob_hist)
             global_enc = torch.cat([alice_global_enc, bob_global_enc],dim=1)
         else:
             global_enc = alice_global_enc
         global_output, *_ = self.encoder_global(global_enc,
-                    1 if one_hist else 2, 
+                    1 if self.one_hist else 2, 
                     src_mask = None, 
                     global_feature=True)
 
@@ -239,7 +240,7 @@ class ConditionalForecaster(nn.Module):
         if add_spe:
             alice_spe = torch.norm(alice_hist-alice_hist[:, -1].unsqueeze(1), dim=-1)
             bob_spe = torch.norm(bob_hist-alice_hist[:, -1, self.bob_joint_indices].unsqueeze(1), dim=-1)
-            spe = torch.exp(-torch.cat([alice_spe, bob_spe], dim=1)).unsqueeze(2)
+            spe = torch.exp(-torch.cat([alice_spe, bob_spe] if not self.one_hist else [alice_spe], dim=1)).unsqueeze(2)
 
         encoder_output = torch.cat([alice_local_output, global_output+spe], dim=1)
 

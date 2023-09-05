@@ -10,6 +10,7 @@ amass/*
 *.bag
 *.txt
 logs*
-synthetic_amass
+synthetic_amass/
+synthetic_amass_rotated/
 cmu_mocap
 check*
