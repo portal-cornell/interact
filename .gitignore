@@ -4,6 +4,7 @@ all_asfamc
 *.npy
 *.csv
 comad_data/*
+comad_json/
 view_npy.py
 amass/*
 *body_models*
@@ -14,3 +15,4 @@ synthetic_amass/
 synthetic_amass_rotated/
 cmu_mocap
 check*
+comad*
