@@ -68,6 +68,8 @@ if __name__ == "__main__":
 
     model_id = f'{"1hist" if ONE_HIST else "2hist"}_{"marginal" if not CONDITIONAL else "conditional"}'
     model_id += f'_{"noAMASS" if args.no_amass else "withAMASS"}_{"handwrist" if args.bob_hand else "alljoints"}'
+    if args.condition_last:
+        model_id += f'_condlast'
     writer = SummaryWriter(log_dir=args.log_dir+'/'+model_id)
     
     train_dataloader = get_dataloader(split='train', batch_size=args.batch_size, include_amass=(not args.no_amass))
@@ -105,6 +107,9 @@ if __name__ == "__main__":
                                         batch[0].shape[1], -1)[:, -1].unsqueeze(1)
             alice_hist, alice_fut, bob_hist, bob_fut = [(b.reshape(b.shape[0], 
                                         b.shape[1], -1) - offset).to(device) for b in batch]
+            if args.condition_last:
+                bob_fut_zeros = torch.zeros_like(bob_fut)
+                bob_fut[:,:-1] = bob_fut_zeros[:,:-1]
             alice_forecasts = model(alice_hist, bob_hist, bob_fut)
             loss = mpjpe_loss(alice_forecasts, alice_fut)
                 
