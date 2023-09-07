@@ -1,6 +1,6 @@
 combinations=(
-    "-c --bob-hand" #conditional 2hist hand/wrist
-    "-c" #conditional 2hist alljoints
+    # "-c --bob-hand" #conditional 2hist hand/wrist
+    # "-c" #conditional 2hist alljoints
     "--bob-hand --one-hist" #marginal 1hist hand/wrist
     "--one-hist" #marginal 1hist alljoints
 )
