@@ -8,14 +8,14 @@ import argparse
 import os
 import torch
 import torch_dct
-from MRT.Models import ConditionalForecaster
+from MRT.Models import IntentInformedForecaster
 
-ONE_HIST = False
+ONE_HIST = True
 CONDITIONAL = False
 bob_hand = False
 bob_joints_list = list(range(9)) if not bob_hand else list(range(5,9))
 device = 'cpu'
-model = ConditionalForecaster(d_word_vec=128, d_model=128, d_inner=1024,
+worst_model = IntentInformedForecaster(d_word_vec=128, d_model=128, d_inner=1024,
                 n_layers=3, n_head=8, d_k=64, d_v=64,
                 device=device,
                 conditional_forecaster=CONDITIONAL,
@@ -24,10 +24,29 @@ model = ConditionalForecaster(d_word_vec=128, d_model=128, d_inner=1024,
                 one_hist=ONE_HIST).to(device)
 model_id = f'{"1hist" if ONE_HIST else "2hist"}_{"marginal" if not CONDITIONAL else "conditional"}'
 model_id += f'_{"withAMASS"}_{"handwrist" if bob_hand else "alljoints"}'
-model_id += '_ft'
-directory = f'./checkpoints_finetuned/saved_model_{model_id}_20'
-model.load_state_dict(torch.load(f'{directory}/20.model', map_location=torch.device('cpu')))
-model.eval()
+# model_id += '_ft'
+directory = f'./checkpoints_new_arch/saved_model_{model_id}'
+worst_model.load_state_dict(torch.load(f'{directory}/50.model', map_location=torch.device('cpu')))
+worst_model.eval()
+
+ONE_HIST = False
+CONDITIONAL = True
+bob_hand = False
+bob_joints_list = list(range(9)) if not bob_hand else list(range(5,9))
+device = 'cpu'
+best_model = IntentInformedForecaster(d_word_vec=128, d_model=128, d_inner=1024,
+                n_layers=3, n_head=8, d_k=64, d_v=64,
+                device=device,
+                conditional_forecaster=CONDITIONAL,
+                bob_joints_list=bob_joints_list,
+                bob_joints_num=len(bob_joints_list),
+                one_hist=ONE_HIST).to(device)
+model_id = f'{"1hist" if ONE_HIST else "2hist"}_{"marginal" if not CONDITIONAL else "conditional"}'
+model_id += f'_{"withAMASS"}_{"handwrist" if bob_hand else "alljoints"}'
+# model_id += '_ft'
+directory = f'./checkpoints_new_arch/saved_model_{model_id}'
+best_model.load_state_dict(torch.load(f'{directory}/50.model', map_location=torch.device('cpu')))
+best_model.eval()
 
 model_joints_idx = [0,1,2,3,4,5,6,9,10]
 
@@ -54,7 +73,7 @@ def get_future(joint_data, current_idx, future_length=15, skip_rate = int(120/15
         future_joints.append(get_relevant_joints(joint_data[idx]))
     return future_joints
 
-def get_forecast(alice_hist_raw, bob_hist_raw, alice_future_raw, bob_future_raw):
+def get_forecast(model, alice_hist_raw, bob_hist_raw, alice_future_raw, bob_future_raw):
     alice_hist = torch.Tensor(np.array(alice_hist_raw)[:,model_joints_idx]).reshape(len(alice_hist_raw),-1).unsqueeze(0)
     bob_hist = torch.Tensor(np.array(bob_hist_raw)[:,model_joints_idx]).reshape(len(bob_hist_raw),-1).unsqueeze(0)
 
@@ -149,13 +168,23 @@ def get_marker_array(current_joints, future_joints, forecast_joints, person = "K
         marker_array.markers.append(tup[1])
     # import pdb; pdb.set_trace()
     for idx, edge in enumerate(edges):
-        for timestep in [5]:
-            tup = get_marker(idx+100000*timestep, forecast_joints[timestep-1], edge,ns=f'forecast', alpha=1, 
+        for timestep in [15]:
+            tup = get_marker(idx+100000*timestep, forecast_joints[timestep-1], edge,ns=f'forecast_worse', alpha=1, 
                             red=1.0, 
                             green=0.1, 
                             blue=0.1)
             marker_array.markers.append(tup[0])
             marker_array.markers.append(tup[1])
+
+    if future_joints:
+        for idx, edge in enumerate(edges):
+            for timestep in [15]:
+                tup = get_marker(idx+100000*timestep, future_joints[timestep-1], edge,ns=f'forecast_better', alpha=1, 
+                                red=0.1, 
+                                green=0.1, 
+                                blue=1.0)
+                marker_array.markers.append(tup[0])
+                marker_array.markers.append(tup[1])
 
     return marker_array
 
@@ -219,15 +248,20 @@ if __name__ == '__main__':
                 history_joints_B = get_history(joint_data_B, timestep, T_in)
                 future_joints_A = get_future(joint_data_A, timestep, T_out)
                 future_joints_B = get_future(joint_data_B, timestep, T_out)
-                forecast_joints_A = get_forecast(history_joints_A, history_joints_B, future_joints_A, future_joints_B)
-                forecast_joints_B = get_forecast(history_joints_B, history_joints_A, future_joints_B, future_joints_A)
+                forecast_joints_A = get_forecast(worst_model, history_joints_A, history_joints_B, future_joints_A, future_joints_B)
+                forecast_joints_B = get_forecast(worst_model, history_joints_B, history_joints_A, future_joints_B, future_joints_A)
+                
+                forecast_joints_A_better = None
+                forecast_joints_B_better = None
+                forecast_joints_A_better = get_forecast(best_model, history_joints_A, history_joints_B, future_joints_A, future_joints_B)
+                forecast_joints_B_better = get_forecast(best_model, history_joints_B, history_joints_A, future_joints_B, future_joints_A)
 
                 marker_array_A = get_marker_array(current_joints=current_joints_A, 
-                                                future_joints=future_joints_A,
+                                                future_joints=forecast_joints_A_better,
                                                 forecast_joints=forecast_joints_A,
                                                 person="Atiksh")
                 marker_array_B = get_marker_array(current_joints=current_joints_B, 
-                                future_joints=future_joints_B,
+                                future_joints=forecast_joints_B_better,
                                 forecast_joints=forecast_joints_B,
                                 person="Kushal")
                                 
