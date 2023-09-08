@@ -101,7 +101,7 @@ if __name__ == "__main__":
                 robot_joints_list=robot_joints_list,
                 robot_joints_num=2).to(device)
 
-    model.hh.load_state_dict(torch.load(f'./checkpoints_new_arch/saved_model_{load_model_id}/{50}.model'))
+    model.hh.load_state_dict(torch.load(f'./checkpoints_new_arch_finetuned/saved_model_{load_model_id}/{50}.model'))
 
     params = [
         {"params": model.parameters(), "lr": args.lr_ft}
