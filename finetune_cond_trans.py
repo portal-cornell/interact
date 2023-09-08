@@ -127,7 +127,7 @@ if __name__ == "__main__":
                 bob_joints_num=len(bob_joints_list),
                 one_hist=ONE_HIST).to(device)
 
-    model.load_state_dict(torch.load(f'./checkpoints_trans/saved_model_{load_model_id}/{50}.model'))
+    model.load_state_dict(torch.load(f'./checkpoints_trans/saved_model_{load_model_id}/{20}.model'))
 
     params = [
         {"params": model.parameters(), "lr": args.lr_ft}
@@ -138,7 +138,7 @@ if __name__ == "__main__":
                 milestones=[15,25,35,40], 
                 gamma=0.1)
 
-    directory = f'./checkpoints_trans_finetune/saved_model_{model_id}'
+    directory = f'./checkpoints_finetuned/saved_model_{model_id}_20'
     pathlib.Path(directory).mkdir(parents=True, exist_ok=True)
 
     for epoch in range(args.epochs):
