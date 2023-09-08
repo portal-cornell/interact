@@ -118,7 +118,7 @@ if __name__ == "__main__":
 
         print(f"train loss after epoch {epoch+1} = ", total_loss.item()/n)
         writer.add_scalar('train/mpjpe', total_loss.item()/n, epoch+1)
-        if (epoch+1)%3 == 0:
+        if (epoch+1)%6 == 0:
             log_metrics(val_dataloader, 'val', writer, epoch)
             log_metrics(test_dataloader, 'test', writer, epoch)
             log_metrics(amass_dataloader, 'amass_test', writer, epoch)

@@ -2,7 +2,7 @@ from torch.utils.data import Dataset, DataLoader
 import numpy as np
 import torch
 import os
-from utils.read_json_data import read_json, get_pose_history
+from utils.read_json_data import read_json, get_pose_history, missing_data
 # from read_json_data import read_json, get_pose_history
 
 class CoMaD(Dataset):
@@ -60,6 +60,10 @@ class CoMaD(Dataset):
             # chop the tensor into a bunch of slices of size sequence_len
             for start_frame in range(alice_tensor.shape[0]-self.sequence_len):
                 end_frame = start_frame + self.sequence_len
+                if missing_data(alice_tensor[start_frame:end_frame]) or \
+                    missing_data(bob_tensor[start_frame:end_frame]):
+                    print("MISSING DATA")
+                    continue
                 self.alice_input.append(alice_tensor[start_frame:start_frame+self.input_n])
                 self.alice_output.append(alice_tensor[start_frame+self.input_n:end_frame])
 
