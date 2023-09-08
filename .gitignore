@@ -15,4 +15,5 @@ synthetic_amass/
 synthetic_amass_rotated/
 cmu_mocap
 check*
-comad*
+comad
+hr*
