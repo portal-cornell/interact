@@ -4,7 +4,9 @@ import torch
 import os
 from utils.read_json_data import read_json, get_pose_history, missing_data
 # from read_json_data import read_json, get_pose_history
+import torch
 
+BOB_OFFSETS = torch.Tensor([0.25, -1.1, 0.1])[None, None,:]
 class CoMaD_HR(Dataset):
 
     def __init__(
@@ -56,8 +58,7 @@ class CoMaD_HR(Dataset):
                             "Atiksh")[::downsample_rate,self.joint_used]
             robot_tensor = get_pose_history(json_data, 
                             "Robot")[::downsample_rate]
-            # import pdb; pdb.set_trace()
-            
+
             # chop the tensor into a bunch of slices of size sequence_len
             for start_frame in range(alice_tensor.shape[0]-self.sequence_len):
                 end_frame = start_frame + self.sequence_len
@@ -69,8 +70,8 @@ class CoMaD_HR(Dataset):
                 self.alice_input.append(alice_tensor[start_frame:start_frame+self.input_n])
                 self.alice_output.append(alice_tensor[start_frame+self.input_n:end_frame])
 
-                self.bob_input.append(bob_tensor[start_frame:start_frame+self.input_n])
-                self.bob_output.append(bob_tensor[start_frame+self.input_n:end_frame])
+                self.bob_input.append(bob_tensor[start_frame:start_frame+self.input_n]+BOB_OFFSETS)
+                self.bob_output.append(bob_tensor[start_frame+self.input_n:end_frame]+BOB_OFFSETS)
 
                 self.robot_input.append(robot_tensor[start_frame:start_frame+self.input_n])
                 self.robot_output.append(robot_tensor[start_frame+self.input_n:end_frame])
