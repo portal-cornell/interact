@@ -47,7 +47,7 @@ def get_dataloader(split='train', batch_size=256, include_amass=True, include_CM
     return dataloader
 
 def log_metrics(dataloader, split, writer, epoch):
-    total_loss, n=0, 0
+    total_loss, total_mpjpe, total_alignment_loss, n=0, 0, 0, 0
     model.eval()
     with torch.no_grad():
         for j, batch in enumerate(dataloader):
@@ -56,15 +56,23 @@ def log_metrics(dataloader, split, writer, epoch):
             alice_hist, alice_fut, bob_hist, bob_fut = [(batch[i].reshape(batch[i].shape[0], 
                                         batch[i].shape[1], -1) - offset).to(device) for i in range(4)]
             robot_hist, robot_fut = [(batch[i].reshape(batch[i].shape[0], batch[i].shape[1], -1) - offset[:, :, -6:]).to(device) for i in range(4,6)]
-            alice_forecasts = model(alice_hist, bob_hist, bob_fut, robot_hist, robot_fut)
+            alice_forecasts, alignment_loss = model(alice_hist, bob_hist, bob_fut, robot_hist, robot_fut)
+            loss = mpjpe_loss(alice_forecasts, alice_fut) 
 
-            loss = mpjpe_loss(alice_forecasts, alice_fut)
             batch_dim = alice_hist.shape[0]
+            total_mpjpe += loss.item()*batch_dim
+            total_alignment_loss += alignment_loss.item()*batch_dim
+
+            if args.align_rep:
+                loss += args.align_weight*alignment_loss
+
             total_loss+=loss*batch_dim
             n+=batch_dim
     
-    print(f"{split} loss after epoch {epoch+1} = ", total_loss.item()/n)
-    writer.add_scalar(f'{split}/mpjpe', total_loss.item()/n, epoch+1)
+    print(f"{split} mpjpe after epoch {epoch+1} = ", total_mpjpe/n)
+    writer.add_scalar(f'{split}/loss', total_loss.item()/n, epoch+1)
+    writer.add_scalar(f'{split}/mpjpe', total_mpjpe/n, epoch+1)
+    writer.add_scalar(f'{split}/align_loss', alignment_loss/n, epoch+1)
 
 if __name__ == "__main__":
     args = get_parser().parse_args()
@@ -99,7 +107,8 @@ if __name__ == "__main__":
                 bob_joints_num=len(bob_joints_list),
                 one_hist=ONE_HIST,
                 robot_joints_list=robot_joints_list,
-                robot_joints_num=2).to(device)
+                robot_joints_num=2,
+                align_rep=args.align_rep).to(device)
 
     model.hh.load_state_dict(torch.load(f'./checkpoints_new_arch_finetuned/saved_model_{load_model_id}/{30}.model'))
 
@@ -113,7 +122,7 @@ if __name__ == "__main__":
     pathlib.Path(directory).mkdir(parents=True, exist_ok=True)
 
     for epoch in range(args.epochs):
-        total_loss, total_mpjpe, n = 0, 0, 0
+        total_loss, total_mpjpe, total_alignment_loss, n = 0, 0, 0, 0
         model.train()
         for j, batch in enumerate(train_dataloader):
             offset = batch[0].reshape(batch[0].shape[0], 
@@ -121,19 +130,27 @@ if __name__ == "__main__":
             alice_hist, alice_fut, bob_hist, bob_fut = [(batch[i].reshape(batch[i].shape[0], 
                                         batch[i].shape[1], -1) - offset).to(device) for i in range(4)]
             robot_hist, robot_fut = [(batch[i].reshape(batch[i].shape[0], batch[i].shape[1], -1) - offset[:, :, -6:]).to(device) for i in range(4,6)]
-            alice_forecasts = model(alice_hist, bob_hist, bob_fut, robot_hist, robot_fut)
-            loss = mpjpe_loss(alice_forecasts, alice_fut)
+            alice_forecasts, alignment_loss = model(alice_hist, bob_hist, bob_fut, robot_hist, robot_fut)
+            loss = mpjpe_loss(alice_forecasts, alice_fut) 
+
+            batch_dim = alice_hist.shape[0]
+            total_mpjpe += loss.item()*batch_dim
+            total_alignment_loss += alignment_loss.item()*batch_dim
+
+            if args.align_rep:
+                loss += args.align_weight*alignment_loss
 
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
             
-            batch_dim = alice_hist.shape[0]
             total_loss+=loss*batch_dim
             n+=batch_dim
 
-        print(f"train loss after epoch {epoch+1} = ", total_loss.item()/n)
-        writer.add_scalar('train/mpjpe', total_loss.item()/n, epoch+1)
+        print(f"train mpjpe after epoch {epoch+1} = ", total_mpjpe/n)
+        writer.add_scalar('train/loss', total_loss.item()/n, epoch+1)
+        writer.add_scalar('train/mpjpe', total_mpjpe/n, epoch+1)
+        writer.add_scalar('train/align_loss', alignment_loss/n, epoch+1)
         if (epoch+1)%3 == 0:
             log_metrics(val_dataloader, 'comad_hr_val', writer, epoch)
             log_metrics(test_dataloader, 'comad_hr_test', writer, epoch)

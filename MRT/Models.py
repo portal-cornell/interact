@@ -144,6 +144,7 @@ class IntentInformedHRForecaster(nn.Module):
             one_hist = False,
             robot_joints_list = None,
             robot_joints_num = 2,
+            align_rep = False,
             device='cuda'):
     
         super().__init__()
@@ -176,6 +177,9 @@ class IntentInformedHRForecaster(nn.Module):
 
         self.robot_joints_num = robot_joints_num
 
+        self.cosine_sim = torch.nn.CosineSimilarity(dim=-1, eps=1e-6)
+        self.align_rep = align_rep
+
         assert d_model == d_word_vec, \
         'To facilitate the residual connections, \
          the dimensions of all module outputs shall be the same.'
@@ -186,8 +190,7 @@ class IntentInformedHRForecaster(nn.Module):
             bob_future,
             robot_hist,
             robot_future,
-            add_spe=True, 
-            bob_is_robot=False):
+            add_spe=True):
         ### This should be zero
         alice_current_pos = alice_hist[:, -1, :].unsqueeze(1)
         
@@ -243,7 +246,16 @@ class IntentInformedHRForecaster(nn.Module):
 
         alice_forecasts = torch.cumsum(alice_forecasts_displacments, dim=1)
 
-        return alice_forecasts
+        align_loss = 0
+        if self.align_rep:
+            if not self.hh.one_hist:
+                cos_dist_hist = 1-self.cosine_sim(bob_global_enc, robot_global_enc)
+                align_loss += torch.mean(cos_dist_hist.reshape(-1, 1))
+            if not self.hh.conditional_forecaster:
+                cos_dist_fut = 1-self.cosine_sim(bob_cond_future_enc, robot_cond_future_enc)
+                align_loss += torch.mean(cos_dist_fut.reshape(-1, 1))
+
+        return alice_forecasts, align_loss
     
 class IntentInformedForecaster(nn.Module):
     def __init__(
