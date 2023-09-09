@@ -17,6 +17,6 @@ def get_parser():
     parser.add_argument("--lr-ft", type=float, help="Predictor learning rate for finetuning", default=1e-4)
     parser.add_argument("--lr-disc", type=float, help="Discriminator learning rate", default=0.0005)
     parser.add_argument("--epochs", type=int, help="Epochs", default=50)
-    parser.add_argument("--eval", type=str, help="Evaluation dataset", default='cmu', choices=['cmu','amass'])
+    parser.add_argument("--eval-data", type=str, help="Evaluation dataset", default='cmu', choices=['cmu','handover','react_stir','table_set'])
 
     return parser

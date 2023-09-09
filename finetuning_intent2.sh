@@ -6,8 +6,10 @@ combinations=(
     "--bob-hand" #marginal 2hist hand/wrist
     "" #marginal 2hist alljoints
 )
+
 for args in "${combinations[@]}"; do
-    python train_intent_forecaster.py --log-dir=./logs_intent_pretrain $args
+    python finetune_intent_forecaster.py --log-dir=./logs_ft_intent_withCMU $args
+    python finetune_hr.py  --log-dir=./logs_ft_intent_hr $args
 done
 
 

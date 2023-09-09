@@ -70,11 +70,11 @@ if __name__ == "__main__":
     model_id += f'_{"noAMASS" if args.no_amass else "withAMASS"}_{"handwrist" if args.bob_hand else "alljoints"}'
     writer = SummaryWriter(log_dir=args.log_dir+'/'+model_id)
     
-    train_dataloader = get_dataloader(split='train', batch_size=args.batch_size, include_amass=(not args.no_amass))
+    train_dataloader = get_dataloader(split='train', batch_size=args.batch_size, include_amass=True, include_CMU_mocap=False)
     val_dataloader = get_dataloader(split='val', batch_size=args.batch_size, include_amass=True, include_CMU_mocap=True)
-    test_dataloader = get_dataloader(split='test', batch_size=args.batch_size, include_amass=True, include_CMU_mocap=True)
-    amass_dataloader = get_dataloader(split='test', batch_size=args.batch_size, include_amass=True, include_CMU_mocap=False)
-    cmu_mocap_dataloader = get_dataloader(split='test', batch_size=args.batch_size, include_amass=False, include_CMU_mocap=True)
+    # test_dataloader = get_dataloader(split='test', batch_size=args.batch_size, include_amass=True, include_CMU_mocap=True)
+    # amass_dataloader = get_dataloader(split='test', batch_size=args.batch_size, include_amass=True, include_CMU_mocap=False)
+    # cmu_mocap_dataloader = get_dataloader(split='test', batch_size=args.batch_size, include_amass=False, include_CMU_mocap=True)
     bob_joints_list = list(range(9)) if not args.bob_hand else list(range(5,9))
 
     model = IntentInformedForecaster(d_word_vec=128, d_model=128, d_inner=1024,
@@ -94,7 +94,7 @@ if __name__ == "__main__":
                 milestones=[15,25,35,40], 
                 gamma=0.1)
 
-    directory = f'./checkpoints_new_arch/saved_model_{model_id}'
+    directory = f'./checkpoints_new_arch2/saved_model_{model_id}'
     pathlib.Path(directory).mkdir(parents=True, exist_ok=True)
 
     for epoch in range(args.epochs):
@@ -120,9 +120,9 @@ if __name__ == "__main__":
         writer.add_scalar('train/mpjpe', total_loss.item()/n, epoch+1)
         if (epoch+1)%6 == 0:
             log_metrics(val_dataloader, 'val', writer, epoch)
-            log_metrics(test_dataloader, 'test', writer, epoch)
-            log_metrics(amass_dataloader, 'amass_test', writer, epoch)
-            log_metrics(cmu_mocap_dataloader, 'cmu_mocap_test', writer, epoch)
+            # log_metrics(test_dataloader, 'test', writer, epoch)
+            # log_metrics(amass_dataloader, 'amass_test', writer, epoch)
+            # log_metrics(cmu_mocap_dataloader, 'cmu_mocap_test', writer, epoch)
 
         # if (epoch+1)%5==0:
         

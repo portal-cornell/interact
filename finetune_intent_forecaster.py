@@ -78,7 +78,7 @@ if __name__ == "__main__":
     model_id += '_ft'
     writer = SummaryWriter(log_dir=args.log_dir+'/'+model_id)
     
-    train_dataloader = get_dataloader(split='train', batch_size=args.batch_size, include_amass=False, include_CMU_mocap=False, include_COMAD=True)
+    train_dataloader = get_dataloader(split='train', batch_size=args.batch_size, include_amass=False, include_CMU_mocap=True, include_COMAD=True)
     # val_dataloader = get_dataloader(split='val', batch_size=args.batch_size, include_amass=(not args.no_amass), include_CMU_mocap=True)
     # test_dataloader = get_dataloader(split='test', batch_size=args.batch_size, include_amass=(not args.no_amass), include_CMU_mocap=True)
     # amass_dataloader = get_dataloader(split='test', batch_size=args.batch_size, include_amass=True, include_CMU_mocap=False)

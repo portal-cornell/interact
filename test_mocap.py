@@ -1,32 +1,40 @@
 import json
 import numpy as np
-from MRT.Models import ConditionalForecaster
+from MRT.Models import IntentInformedForecaster
 import torch
 import numpy as np
 import torch
 import torch_dct as dct #https://github.com/zh217/torch-dct
 from torch.utils.data import DataLoader
 from utils.cmu_mocap import CMU_Mocap
+from utils.comad import CoMaD
 from utils.synthetic_amass import Synthetic_AMASS
 from utils.loss_funcs import mpjpe_loss, fde_error, perjoint_error, perjoint_fde
 from arg_parser import get_parser
 
-### Mapping of joint names to indices for the given dataset (in this case AMASS)
-mapping_file = "./mapping/mocap_mapping.json"
-with open(mapping_file, 'r') as f:
-    mapping = json.load(f)       
 
 ### Define models we want to compute metrics for
-models = ["saved_model_2hist_conditional_withAMASS_alljoints",
-          "saved_model_2hist_conditional_withAMASS_handwrist",
-          "saved_model_2hist_marginal_withAMASS_alljoints",
-          "saved_model_2hist_marginal_withAMASS_handwrist"]
+models = [
+        #   "saved_model_1hist_marginal_withAMASS_alljoints",
+          "saved_model_1hist_marginal_withAMASS_alljoints_ft",
+          "saved_model_2hist_marginal_withAMASS_alljoints_ft",
+          "saved_model_2hist_marginal_withAMASS_handwrist_ft",
+          "saved_model_2hist_conditional_withAMASS_alljoints_ft",
+          "saved_model_2hist_conditional_withAMASS_handwrist_ft"
+        ]
+
+dataset_map = {
+    'cmu': lambda: CMU_Mocap(split='test'),
+    'handover': lambda: CoMaD(split='test',subtask='handover',transitions=True),
+    'react_stir': lambda: CoMaD(split='test',subtask='react_stir',transitions=True),
+    'table_set': lambda: CoMaD(split='test',subtask='table_set')
+}
 
 if __name__ == '__main__':
     args = get_parser().parse_args()
     model_results_dict = {}
     ### Change to test set for AMASS
-    Dataset = CMU_Mocap(split='test') if args.eval == 'cmu' else Synthetic_AMASS(split='test')
+    Dataset = dataset_map[args.eval_data]()
     loader_test = DataLoader(
         Dataset,
         batch_size=args.batch_size,
@@ -35,12 +43,13 @@ if __name__ == '__main__':
     for model_path in models:
         ### Change model to match ConditionalForecaster
         bob_joints_list = list(range(9)) if not 'handwrist' in model_path else list(range(5,9))
-        model = ConditionalForecaster(d_word_vec=128, d_model=128, d_inner=1024,
+        model = IntentInformedForecaster(d_word_vec=128, d_model=128, d_inner=1024,
                 n_layers=3, n_head=8, d_k=64, d_v=64,
-                device='cpu',
+                device='cuda',
                 conditional_forecaster='conditional' in model_path,
                 bob_joints_list=bob_joints_list,
-                bob_joints_num=len(bob_joints_list)).to('cuda')
+                bob_joints_num=len(bob_joints_list),
+                one_hist='1hist' in model_path).to('cuda')
 
         ### Load state dict of that model
         # if model_path == "current" or model_path == "cvm":
@@ -49,7 +58,7 @@ if __name__ == '__main__':
         #     args.prediction_method = model_path
         # else:
         args.prediction_method = "neural"
-        model.load_state_dict(torch.load(f'./checkpoints/{model_path}/{40}.model'))
+        model.load_state_dict(torch.load(f'./checkpoints_eval/{model_path}/{30}.model'))
         model.eval()
 
         ### Set up metrics we want to compute
@@ -63,7 +72,6 @@ if __name__ == '__main__':
         n=0
         with torch.no_grad():
             for cnt,batch in enumerate(loader_test): 
-                print(cnt)
                 # Match forward pass at train time
                 offset = batch[0].reshape(batch[0].shape[0], 
                                         batch[0].shape[1], -1)[:, -1].unsqueeze(1)
@@ -97,11 +105,11 @@ if __name__ == '__main__':
         all_joints_fde_mean = np.array(running_per_joint_fdes).mean(axis=1).mean()*1000
         all_joints_fde_std = np.array(running_per_joint_fdes).mean(axis=1).std()*1000/np.sqrt((n))
 
-        wrist_ade_mean = np.array(running_per_joint_errors)[:, 5:7].mean(axis=1).mean()*1000
-        wrist_ade_std = np.array(running_per_joint_errors)[:, 5:7].mean(axis=1).std()*1000/np.sqrt((n))
+        wrist_ade_mean = np.array(running_per_joint_errors)[:, 5:9].mean(axis=1).mean()*1000
+        wrist_ade_std = np.array(running_per_joint_errors)[:, 5:9].mean(axis=1).std()*1000/np.sqrt((n))
 
-        wrist_fde_mean = np.array(running_per_joint_fdes)[:, 5:7].mean(axis=1).mean()*1000
-        wrist_fde_std = np.array(running_per_joint_fdes)[:, 5:7].mean(axis=1).std()*1000/np.sqrt((n))
+        wrist_fde_mean = np.array(running_per_joint_fdes)[:, 5:9].mean(axis=1).mean()*1000
+        wrist_fde_std = np.array(running_per_joint_fdes)[:, 5:9].mean(axis=1).std()*1000/np.sqrt((n))
 
         model_results_dict[model_path] = {
             'all_joints_ade': [all_joints_ade_mean, all_joints_ade_std],
@@ -111,6 +119,7 @@ if __name__ == '__main__':
         }
     
     ### Print out all the results
+    print('DATASET: ' + args.eval_data)
     metrics = ['all_joints','wrist']
     for metric in metrics:
         for model_path in models:
