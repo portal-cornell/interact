@@ -228,7 +228,7 @@ if __name__ == "__main__":
 
             marker_array_A = get_marker_array(current_joints=current_joints_A, 
                                             future_joints=future_joints_A,
-                                            forecast_joints=forecast_joints_A,
+                                            forecast_joints=,
                                             person="Atiksh")
             marker_array_B = get_marker_array(current_joints=current_joints_B, 
                             future_joints=future_joints_B,
