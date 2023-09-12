@@ -62,8 +62,8 @@ class CoMaD_HR(Dataset):
             robot_tensor = get_pose_history(json_data, 
                             "Robot")[::downsample_rate]
             def fix_orientation(tensor):
-                tensor[:,:,0] *= -1 
-                tensor[:,:,1], tensor[:,:,2] = tensor[:,:,2], tensor[:,:,1]
+                tensor[:,:,[0,1,2]] = tensor[:,:,[0,2,1]]
+                tensor[:,:,0] *= -1
                 return tensor
 
             alice_tensor = fix_orientation(alice_tensor)

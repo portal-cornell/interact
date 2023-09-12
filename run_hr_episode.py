@@ -28,7 +28,8 @@ def get_model(ONE_HIST=False, CONDITIONAL=True, bob_hand = True, align_rep = Tru
     model_id += f'_{"withAMASS"}_{"handwrist" if bob_hand else "alljoints"}'
     model_id += '_ft'
     model_id += '_hr'
-    directory = f'./checkpoints_new_arch_finetuned_hr/saved_model_{model_id}'
+    model_id += '_noalign'
+    directory = f'./checkpoints_new_arch_finetuned_hr_oriented/saved_model_{model_id}'
     model.load_state_dict(torch.load(f'{directory}/50.model', map_location=torch.device('cuda')))
     model.eval()
     return model
@@ -87,7 +88,9 @@ def get_forecast(model, alice_hist_raw, bob_hist_raw, alice_future_raw, bob_futu
     # print(results.shape)
     results = results + offset
     alice_future_raw = np.array(alice_future_raw)
+    alice_future_raw = fix_orientation(alice_future_raw)
     alice_hist_raw = np.array(alice_hist_raw)
+    alice_hist_raw = fix_orientation(alice_hist_raw)
     alice_future_raw[:,model_joints_idx,:] = results.cpu().numpy().reshape(15, 9, 3)
     # import pdb; pdb.set_trace()
     alice_future_raw[:, 7:9, :] = alice_hist_raw[-1:, 7:9, :]
@@ -129,8 +132,10 @@ def get_marker(id, pose, edge, ns = 'current', alpha=1, red=1, green=1, blue=1):
     x, y, z = pos1.tolist()
 
     p1.x, p1.y, p1.z = -x, z, y
+    # p1.x, p1.y, p1.z = x, y, z
     x, y, z = pos2.tolist()
     p2.x, p2.y, p2.z = -x, z, y
+    # p2.x, p2.y, p2.z = x, y, z
 
     p1m.points = [p1, p2]
     marker.points = [p1, p2]
@@ -194,6 +199,11 @@ def forecast_jumped(forecast, prev_forecast):
     # print(forecast.shape)
     return False
 
+def fix_orientation(tensor):
+    tensor[:,:,[0,1,2]] = tensor[:,:,[0,2,1]]
+    tensor[:,:,0] *= -1
+    return tensor
+
 if __name__ == '__main__':
     rospy.init_node('forecaster', anonymous=True)
     human_A_forecast = rospy.Publisher("/alice_forecast", MarkerArray, queue_size=1)
@@ -235,8 +245,8 @@ if __name__ == '__main__':
             with open(episode_file, 'r') as f:
                 data = json.load(f)
             for stream_person in data:
-                person_data[stream_person] = np.array(data[stream_person])
-                print(len(person_data[stream_person]))
+                person_data[stream_person] = fix_orientation(np.array(data[stream_person]))
+                print((person_data[stream_person]).shape)
             for timestep in range(len(data[list(data.keys())[0]])):
                 print(round(timestep/120, 1))
                 if not pause and listener.running:
@@ -269,10 +279,15 @@ if __name__ == '__main__':
                     #                                 marginal_forecast_joints=marginal_forecast_joints_A,
                     #                                 conditional_forecast_joints=conditional_forecast_joints_A,
                     #                                 person="Atiksh")
+                    # marker_array_B = get_marker_array(current_joints=current_joints_B, 
+                    #                                 future_joints=future_joints_B,
+                    #                                 marginal_forecast_joints=marginal_forecast_joints_B,
+                    #                                 conditional_forecast_joints=conditional_forecast_joints_B,
+                    #                                 person="Kushal")
                     marker_array_B = get_marker_array(current_joints=current_joints_B, 
-                                                    future_joints=future_joints_B,
-                                                    marginal_forecast_joints=marginal_forecast_joints_B,
-                                                    conditional_forecast_joints=conditional_forecast_joints_B,
+                                                    future_joints=None,
+                                                    marginal_forecast_joints=None,
+                                                    conditional_forecast_joints=None,
                                                     person="Kushal")
                                     
                     # human_A_forecast.publish(marker_array_A)
