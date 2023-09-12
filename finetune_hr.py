@@ -121,7 +121,7 @@ if __name__ == "__main__":
 
     optimizer = optim.Adam(params,weight_decay=1e-05)
 
-    directory = f'./checkpoints_new_arch_finetuned_hr_oriented/saved_model_{model_id}'
+    directory = f'./checkpoints_new_arch_finetuned_hr_oriented_test3/saved_model_{model_id}'
     pathlib.Path(directory).mkdir(parents=True, exist_ok=True)
     # save_path=f'{directory}/{0}.model'
     # torch.save(model.state_dict(),save_path)

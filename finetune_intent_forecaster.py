@@ -75,7 +75,8 @@ if __name__ == "__main__":
     model_id = f'{"1hist" if ONE_HIST else "2hist"}_{"marginal" if not CONDITIONAL else "conditional"}'
     model_id += f'_{"noAMASS" if args.no_amass else "withAMASS"}_{"handwrist" if args.bob_hand else "alljoints"}'
     load_model_id = model_id[:]
-    model_id += '_ft'
+    # model_id += '_ft'
+    model_id += '_scratch'
     writer = SummaryWriter(log_dir=args.log_dir+'/'+model_id)
     
     train_dataloader = get_dataloader(split='train', batch_size=args.batch_size, include_amass=False, include_CMU_mocap=True, include_COMAD=True)
@@ -95,10 +96,10 @@ if __name__ == "__main__":
                 bob_joints_num=len(bob_joints_list),
                 one_hist=ONE_HIST).to(device)
 
-    model.load_state_dict(torch.load(f'./checkpoints_new_arch_pretrain_final/saved_model_{load_model_id}/{50}.model'))
+    # model.load_state_dict(torch.load(f'./checkpoints_new_arch_pretrain_final/saved_model_{load_model_id}/{50}.model'))
 
     params = [
-        {"params": model.parameters(), "lr": args.lr_ft}
+        {"params": model.parameters(), "lr": args.lr_pred}
     ]
 
     optimizer = optim.Adam(params,weight_decay=1e-05)
@@ -106,7 +107,7 @@ if __name__ == "__main__":
                 milestones=[15,25,35,40], 
                 gamma=0.1)
 
-    directory = f'./checkpoints_new_arch_finetuned_hh_final/saved_model_{model_id}'
+    directory = f'./checkpoints_eval/saved_model_{model_id}'
     pathlib.Path(directory).mkdir(parents=True, exist_ok=True)
 
     for epoch in range(args.epochs):

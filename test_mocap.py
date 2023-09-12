@@ -15,10 +15,9 @@ from arg_parser import get_parser
 
 ### Define models we want to compute metrics for
 models = [
-        #   "saved_model_1hist_marginal_withAMASS_alljoints",
+          "saved_model_1hist_marginal_withAMASS_alljoints",
+          "saved_model_1hist_marginal_withAMASS_alljoints_scratch",
           "saved_model_1hist_marginal_withAMASS_alljoints_ft",
-          "saved_model_2hist_marginal_withAMASS_alljoints_ft",
-          "saved_model_2hist_marginal_withAMASS_handwrist_ft",
           "saved_model_2hist_conditional_withAMASS_alljoints_ft",
           "saved_model_2hist_conditional_withAMASS_handwrist_ft"
         ]
@@ -122,15 +121,15 @@ if __name__ == '__main__':
     print('DATASET: ' + args.eval_data)
     metrics = ['all_joints','wrist']
     for metric in metrics:
-        for model_path in models:
-            ade_metric = metric + '_ade'
-            mean = round(model_results_dict[model_path][ade_metric][0], 1)
-            std = round(model_results_dict[model_path][ade_metric][1], 1)
-            print(f'{mean} (\pm {std})', end = ' &')
-            if model_path == "cvm":
-                print('&', end='')
-        print()
-        print('='*20)
+        # for model_path in models:
+        #     ade_metric = metric + '_ade'
+        #     mean = round(model_results_dict[model_path][ade_metric][0], 1)
+        #     std = round(model_results_dict[model_path][ade_metric][1], 1)
+        #     print(f'{mean} (\pm {std})', end = ' &')
+        #     if model_path == "cvm":
+        #         print('&', end='')
+        # print()
+        # print('='*20)
         for model_path in models:
             fde_metric = metric + '_fde'
             mean = round(model_results_dict[model_path][fde_metric][0], 1)

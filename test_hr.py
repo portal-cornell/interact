@@ -20,11 +20,10 @@ models = [
     # 'saved_model_1hist_marginal_withAMASS_handwrist_ft_hr_noalign_HHonly',
     # 'saved_model_2hist_conditional_withAMASS_alljoints_ft_hr',
     # 'saved_model_2hist_conditional_withAMASS_alljoints_ft_hr_noalign',
-    # 'saved_model_2hist_conditional_withAMASS_handwrist_ft_hr_noalign',
-    'saved_model_2hist_conditional_withAMASS_handwrist_ft_hr_scratch',
-    'saved_model_1hist_marginal_withAMASS_alljoints_ft_hr_noalign_HHonly',
     'saved_model_2hist_conditional_withAMASS_alljoints_ft_hr_noalign',
     'saved_model_2hist_conditional_withAMASS_alljoints_ft_hr',
+    'saved_model_2hist_conditional_withAMASS_handwrist_ft_hr_noalign',
+    'saved_model_2hist_conditional_withAMASS_handwrist_ft_hr',
         ]
 
 dataset_map = {
@@ -67,7 +66,7 @@ if __name__ == '__main__':
         #     args.prediction_method = model_path
         # else:
         args.prediction_method = "neural"
-        model.load_state_dict(torch.load(f'./checkpoints_new_arch_finetuned_hr_oriented/{model_path}/{30}.model'))
+        model.load_state_dict(torch.load(f'./checkpoints_new_arch_finetuned_hr_oriented_test1/{model_path}/{30}.model'))
         model.eval()
 
         ### Set up metrics we want to compute
@@ -132,15 +131,15 @@ if __name__ == '__main__':
     print('DATASET: ' + args.eval_data)
     metrics = ['all_joints','wrist']
     for metric in metrics:
-        for model_path in models:
-            ade_metric = metric + '_ade'
-            mean = round(model_results_dict[model_path][ade_metric][0], 1)
-            std = round(model_results_dict[model_path][ade_metric][1], 1)
-            print(f'{mean} (\pm {std})', end = ' &')
-            if model_path == "cvm":
-                print('&', end='')
-        print()
-        print('='*20)
+        # for model_path in models:
+        #     ade_metric = metric + '_ade'
+        #     mean = round(model_results_dict[model_path][ade_metric][0], 1)
+        #     std = round(model_results_dict[model_path][ade_metric][1], 1)
+        #     print(f'{mean} (\pm {std})', end = ' &')
+        #     if model_path == "cvm":
+        #         print('&', end='')
+        # print()
+        # print('='*20)
         for model_path in models:
             fde_metric = metric + '_fde'
             mean = round(model_results_dict[model_path][fde_metric][0], 1)
