@@ -61,6 +61,14 @@ class CoMaD_HR(Dataset):
                             "Atiksh")[::downsample_rate,self.joint_used]
             robot_tensor = get_pose_history(json_data, 
                             "Robot")[::downsample_rate]
+            def fix_orientation(tensor):
+                tensor[:,:,0] *= -1 
+                tensor[:,:,1], tensor[:,:,2] = tensor[:,:,2], tensor[:,:,1]
+                return tensor
+
+            alice_tensor = fix_orientation(alice_tensor)
+            bob_tensor = fix_orientation(bob_tensor)
+            robot_tensor = fix_orientation(robot_tensor)
 
             # chop the tensor into a bunch of slices of size sequence_len
             for start_frame in range(alice_tensor.shape[0]-self.sequence_len):
