@@ -40,7 +40,7 @@ KUSHAL_OFFSETS = {
 class BagReaderHR():
     def __init__(self):
         rospy.init_node('realworld', anonymous=True)
-        ee_sub = rospy.Subscriber('/ee_curr_pose', PoseStamped, self.ee_callback, queue_size=1)
+        ee_sub = rospy.Subscriber('/ee_curr_pose', MarkerArray, self.ee_callback, queue_size=1)
         human_forecast_subscriber = rospy.Subscriber('/human_forecast', MarkerArray, self.human_forecast_callback, queue_size=1)
         self.atiksh_pose = None
         self.kushal_pose = None
@@ -124,18 +124,10 @@ class BagReaderHR():
         dist = np.linalg.norm(diff)
         return np.arccos(diff[0]/dist), np.arccos(diff[1]/dist), np.arccos(diff[2]/dist)
 
-    def ee_callback(self, pose, ee_length = 0.1):
-        pos = pose.pose.position
-        x1, y1, z1 = pos.x, pos.y, pos.z
-        ori = pose.pose.orientation 
-        q_x, q_y, q_z, q_w = ori.y, ori.z , ori.w, ori.x
-        direction = np.array([0, 0, 1.0])
-        r = R.from_quat([q_x, q_y, q_z, q_w])
-        del_vec = np.matmul(np.array(r.as_matrix()), direction)
-        x2 = x1 - del_vec[0]*ee_length
-        y2 = y1 - del_vec[1]*ee_length
-        z2 = z1 - del_vec[2]*ee_length
-        self.ee_pose = [[x1, y1, z1], [x2, y2, z2]]
+    def ee_callback(self, markerArray, ee_length = 0.1):
+        marker, p1m = markerArray.markers
+        p1, p2 = marker.points
+        self.ee_pose = [[p1.x, p1.y, p1.z], [p2.x, p2.y, p2.z]]
 
 ee_pub = rospy.Publisher('/ee_pub', MarkerArray)
 br = BagReaderHR()

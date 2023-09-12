@@ -146,15 +146,12 @@ if __name__ == '__main__':
     parser.add_argument('--set_num',type=str,default="1",help="Number of Dataset")
     parser.add_argument('--ep_num', type=str,default="0",help="Episode to watch/leave blank if wanting to watch whole set")
     parser.add_argument('--ros_rate', type=int,default=15,help="Playback Speed")
+    parser.add_argument('--task_name', type=str,default="take",help="Playback Speed")
 
     args = parser.parse_args()
 
 
-    episode_file = f"./comad/human_robot_data/bag_files/take_{args.set_num}/take_{args.set_num}_{args.ep_num}.json"
-    mapping_file = "mapping/comad_mapping.json"
-
-    with open(mapping_file, 'r') as f:
-        mapping = json.load(f)
+    episode_file = f"./comad/human_robot_data/jsons/{args.task_name}_{args.set_num}_{args.ep_num}.json"
     
     with open(episode_file, 'r') as f:
         data = json.load(f)
@@ -170,8 +167,6 @@ if __name__ == '__main__':
 
     rate = rospy.Rate(args.ros_rate)
     
-    
-
     person_data = {}
     for stream_person in data:
         person_data[stream_person] = np.array(data[stream_person])
