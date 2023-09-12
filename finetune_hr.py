@@ -40,7 +40,8 @@ def get_dataloader(split='train', batch_size=256, include_amass=True, include_CM
     #     if split not in dataset_map['COMAD']:
     #         dataset_map['COMAD'][split] = CoMaD(split=split)
     #     datalst.append(dataset_map['COMAD'][split])
-    dataset = CoMaD_HR(split=split)
+    dataset = CoMaD_HR(split=split,
+                subtask='cabinet')
     dataloader = DataLoader(dataset, 
                 batch_size=batch_size, 
                 shuffle=True if split == 'train' else False)
@@ -110,7 +111,7 @@ if __name__ == "__main__":
                 robot_joints_num=2,
                 align_rep=args.align_rep).to(device)
 
-    model.hh.load_state_dict(torch.load(f'./checkpoints_new_arch_finetuned/saved_model_{load_model_id}/{30}.model'))
+    model.hh.load_state_dict(torch.load(f'./checkpoints_eval/saved_model_{load_model_id}/{30}.model'))
 
     params = [
         {"params": model.parameters(), "lr": args.lr_ft}
@@ -118,7 +119,7 @@ if __name__ == "__main__":
 
     optimizer = optim.Adam(params,weight_decay=1e-05)
 
-    directory = f'./checkpoints_new_arch_finetuned_hr/saved_model_{model_id}'
+    directory = f'./checkpoints_new_arch_finetuned_hr_final/saved_model_{model_id}'
     pathlib.Path(directory).mkdir(parents=True, exist_ok=True)
 
     for epoch in range(args.epochs):
@@ -135,9 +136,9 @@ if __name__ == "__main__":
 
             batch_dim = alice_hist.shape[0]
             total_mpjpe += loss.item()*batch_dim
-            total_alignment_loss += alignment_loss.item()*batch_dim
-
+            
             if args.align_rep:
+                total_alignment_loss += alignment_loss.item()*batch_dim
                 loss += args.align_weight*alignment_loss
 
             optimizer.zero_grad()

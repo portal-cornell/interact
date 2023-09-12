@@ -70,7 +70,7 @@ if __name__ == "__main__":
     model_id += f'_{"noAMASS" if args.no_amass else "withAMASS"}_{"handwrist" if args.bob_hand else "alljoints"}'
     writer = SummaryWriter(log_dir=args.log_dir+'/'+model_id)
     
-    train_dataloader = get_dataloader(split='train', batch_size=args.batch_size, include_amass=True, include_CMU_mocap=False)
+    train_dataloader = get_dataloader(split='train', batch_size=args.batch_size, include_amass=True, include_CMU_mocap=False, include_COMAD=False)
     val_dataloader = get_dataloader(split='val', batch_size=args.batch_size, include_amass=True, include_CMU_mocap=True)
     # test_dataloader = get_dataloader(split='test', batch_size=args.batch_size, include_amass=True, include_CMU_mocap=True)
     # amass_dataloader = get_dataloader(split='test', batch_size=args.batch_size, include_amass=True, include_CMU_mocap=False)
@@ -94,7 +94,7 @@ if __name__ == "__main__":
                 milestones=[15,25,35,40], 
                 gamma=0.1)
 
-    directory = f'./checkpoints_new_arch2/saved_model_{model_id}'
+    directory = f'./checkpoints_new_arch_pretrain_final/saved_model_{model_id}'
     pathlib.Path(directory).mkdir(parents=True, exist_ok=True)
 
     for epoch in range(args.epochs):

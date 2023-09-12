@@ -9,7 +9,7 @@ combinations=(
 
 for args in "${combinations[@]}"; do
     python finetune_intent_forecaster.py --log-dir=./logs_ft_intent_withCMU $args
-    python finetune_hr.py  --log-dir=./logs_ft_intent_hr $args
+    python finetune_hr.py  --log-dir=./logs_ft_intent_hr_align --align_rep $args
 done
 
 

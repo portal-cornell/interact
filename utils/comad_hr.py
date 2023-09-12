@@ -6,18 +6,18 @@ from utils.read_json_data import read_json, get_pose_history, missing_data
 # from read_json_data import read_json, get_pose_history
 import torch
 
-BOB_OFFSETS = torch.Tensor([0.25, -1.1, 0.1])[None, None,:]
 class CoMaD_HR(Dataset):
 
     def __init__(
             self, 
-            data_dir = 'hr', 
+            data_dir = 'hr_new', 
             input_n = 15,
             output_n = 15,
             sample_rate = 15,
             output_rate = 15,
             mapping_json = "mapping/comad_mapping.json", 
-            split='train'
+            split='train',
+            subtask=None
             ):
         """
         data_dir := './comad_data'
@@ -37,6 +37,7 @@ class CoMaD_HR(Dataset):
         self.sequence_len = input_n + output_n
         self.input_n = input_n
         self.output_n = output_n
+        self.subtask = subtask
 
         ### harcoded joints order
         self.joint_used = np.array([0, 1, 2, 3, 4, 5, 6, 9, 10])
@@ -44,6 +45,8 @@ class CoMaD_HR(Dataset):
 
     def add_comad_dataset(self):
         for episode in os.listdir(f'{self.data_dir}/{self.split}_hr'):
+            if self.subtask and self.subtask not in episode:
+                continue
             print(f'Episode: {self.data_dir}/{self.split}_hr/{episode}')
             try:
                 json_data = read_json(f'{self.data_dir}/{self.split}_hr/{episode}')
@@ -70,8 +73,8 @@ class CoMaD_HR(Dataset):
                 self.alice_input.append(alice_tensor[start_frame:start_frame+self.input_n])
                 self.alice_output.append(alice_tensor[start_frame+self.input_n:end_frame])
 
-                self.bob_input.append(bob_tensor[start_frame:start_frame+self.input_n]+BOB_OFFSETS)
-                self.bob_output.append(bob_tensor[start_frame+self.input_n:end_frame]+BOB_OFFSETS)
+                self.bob_input.append(bob_tensor[start_frame:start_frame+self.input_n])
+                self.bob_output.append(bob_tensor[start_frame+self.input_n:end_frame])
 
                 self.robot_input.append(robot_tensor[start_frame:start_frame+self.input_n])
                 self.robot_output.append(robot_tensor[start_frame+self.input_n:end_frame])

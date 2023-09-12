@@ -134,6 +134,13 @@ class CoMaD(Dataset):
                     self.bob_input.append(bob_tensor[start_frame:start_frame+self.input_n])
                     self.bob_output.append(bob_tensor[start_frame+self.input_n:end_frame])
 
+                    ### Flip Alice and Bob
+                    self.alice_input.append(bob_tensor[start_frame:start_frame+self.input_n])
+                    self.alice_output.append(bob_tensor[start_frame+self.input_n:end_frame])
+
+                    self.bob_input.append(alice_tensor[start_frame:start_frame+self.input_n])
+                    self.bob_output.append(alice_tensor[start_frame+self.input_n:end_frame])
+
             # break
         print(len(self.alice_input))
 
