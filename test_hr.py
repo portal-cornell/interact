@@ -120,6 +120,10 @@ if __name__ == '__main__':
             'wrist_ade': [wrist_ade_mean, wrist_ade_std],
             'wrist_fde': [wrist_fde_mean, wrist_fde_std],
         }
+
+        with open(f'./metrics/{args.eval_data}_{model_path}.npy', 'wb') as f:
+            np.save(f, wrist_fde_mean)
+            np.save(f, wrist_fde_std)
     
     ### Print out all the results
     print('DATASET: ' + args.eval_data)
