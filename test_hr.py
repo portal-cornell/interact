@@ -13,17 +13,11 @@ from arg_parser import get_parser
 
 ### Define models we want to compute metrics for
 models = [
-    # 'saved_model_1hist_marginal_withAMASS_alljoints_ft_hr_noalign',
-    # 'saved_model_1hist_marginal_withAMASS_alljoints_ft_hr_noalign_HHonly',
-    # 'saved_model_1hist_marginal_withAMASS_alljoints_ft_hr_noalign_scratch',
-    # 'saved_model_1hist_marginal_withAMASS_handwrist_ft_hr_noalign',
-    # 'saved_model_1hist_marginal_withAMASS_handwrist_ft_hr_noalign_HHonly',
-    # 'saved_model_2hist_conditional_withAMASS_alljoints_ft_hr',
-    # 'saved_model_2hist_conditional_withAMASS_alljoints_ft_hr_noalign',
+    'saved_model_1hist_marginal_withAMASS_alljoints_ft_hr_noalign_HHonly',
+    'saved_model_1hist_marginal_withAMASS_alljoints_ft_hr_noalign_scratch',
+    'saved_model_1hist_marginal_withAMASS_alljoints_ft_hr_noalign',
     'saved_model_2hist_conditional_withAMASS_alljoints_ft_hr_noalign',
-    'saved_model_2hist_conditional_withAMASS_alljoints_ft_hr',
-    'saved_model_2hist_conditional_withAMASS_handwrist_ft_hr_noalign',
-    'saved_model_2hist_conditional_withAMASS_handwrist_ft_hr',
+    'saved_model_2hist_conditional_withAMASS_alljoints_ft_hr'
         ]
 
 dataset_map = {
@@ -66,7 +60,7 @@ if __name__ == '__main__':
         #     args.prediction_method = model_path
         # else:
         args.prediction_method = "neural"
-        model.load_state_dict(torch.load(f'./checkpoints_new_arch_finetuned_hr_oriented_test1/{model_path}/{30}.model'))
+        model.load_state_dict(torch.load(f'./checkpoints_new_arch_finetuned_hr_oriented_test_final/{model_path}/{30}.model'))
         model.eval()
 
         ### Set up metrics we want to compute

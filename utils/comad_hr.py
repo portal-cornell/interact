@@ -10,7 +10,7 @@ class CoMaD_HR(Dataset):
 
     def __init__(
             self, 
-            data_dir = 'hr_new', 
+            data_dir = 'new_hr', 
             input_n = 15,
             output_n = 15,
             sample_rate = 15,

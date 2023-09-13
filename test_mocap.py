@@ -24,8 +24,8 @@ models = [
 
 dataset_map = {
     'cmu': lambda: CMU_Mocap(split='test'),
-    'handover': lambda: CoMaD(split='test',subtask='handover',transitions=True),
-    'react_stir': lambda: CoMaD(split='test',subtask='react_stir',transitions=True),
+    'handover': lambda: CoMaD(split='test',subtask='handover',transitions=False),
+    'react_stir': lambda: CoMaD(split='test',subtask='react_stir',transitions=False),
     'table_set': lambda: CoMaD(split='test',subtask='table_set')
 }
 
@@ -116,6 +116,9 @@ if __name__ == '__main__':
             'wrist_ade': [wrist_ade_mean, wrist_ade_std],
             'wrist_fde': [wrist_fde_mean, wrist_fde_std],
         }
+        with open(f'./metrics/{args.eval_data}_{model_path}.npy', 'wb') as f:
+            np.save(f, wrist_fde_mean)
+            np.save(f, wrist_fde_std)
     
     ### Print out all the results
     print('DATASET: ' + args.eval_data)
@@ -139,3 +142,4 @@ if __name__ == '__main__':
                 print('&', end='')
         print()
         print('='*20)
+    
