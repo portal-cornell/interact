@@ -8,12 +8,13 @@ def convert_time_to_frame(time, hz=15, offset=0):
     return int(((mins*60 + secs) * hz) + offset * hz)
 # import pdb; pdb.set_trace()
 bag_name = sys.argv[1]
+task_name = bag_name.split('_')[0]
 
 with open(f'comad/human_robot_data/timestamps/{bag_name}.txt') as f: data = f.readlines()
 start_end_times = [list(map(convert_time_to_frame, se.split('-'))) for se in data]
 clips = []
 
-episode_file = f'comad/human_robot_data/jsons/{bag_name}.json'
+episode_file = f'comad/human_robot_data/{task_name}_jsons/{bag_name}.json'
 with open(episode_file, 'r') as f:
     data = json.load(f)
 atiksh_frames = data['Atiksh']
@@ -26,8 +27,6 @@ for start_frame, end_frame in start_end_times:
     current_clip = {"Atiksh":atiksh_arr, "Kushal":kushal_arr, "Robot":robot_arr}
     clips.append(current_clip)
 
-
-
 for idx in range(len(clips)):
-    with open(f'./comad/human_robot_data/jsons/{bag_name}_{idx}.json', 'w') as f:
+    with open(f'./comad/human_robot_data/{task_name}_jsons/all/{bag_name}_{idx}.json', 'w') as f:
         json.dump(clips[idx], f, indent=4)
