@@ -28,14 +28,15 @@ def get_model(ONE_HIST=False, CONDITIONAL=True, bob_hand = True, align_rep = Tru
     model_id += f'_{"withAMASS"}_{"handwrist" if bob_hand else "alljoints"}'
     model_id += '_ft'
     model_id += '_hr'
-    model_id += '_noalign'
-    directory = f'./checkpoints_new_arch_finetuned_hr_oriented/saved_model_{model_id}'
+    if align_rep == False:
+        model_id += '_noalign'
+    directory = f'./checkpoints_new_arch_finetuned_hr_oriented_test_final/saved_model_{model_id}'
     model.load_state_dict(torch.load(f'{directory}/50.model', map_location=torch.device('cuda')))
     model.eval()
     return model
 
-marginal_model = get_model(ONE_HIST=True, CONDITIONAL=False, bob_hand=False)
-conditional_model = get_model(ONE_HIST=False, CONDITIONAL=True, bob_hand=False)
+marginal_model = get_model(ONE_HIST=True, CONDITIONAL=False, bob_hand=False, align_rep = False)
+conditional_model = get_model(ONE_HIST=False, CONDITIONAL=True, bob_hand=False, align_rep = True)
 model_joints_idx = [0,1,2,3,4,5,6,9,10]
 
 def get_history(joint_data, current_idx, history_length, skip_rate = int(15/15), relevant_joints=['BackTop', 'LShoulderBack', 'RShoulderBack',
@@ -103,7 +104,7 @@ def get_marker(id, pose, edge, ns = 'current', alpha=1, red=1, green=1, blue=1):
 
     SCALE = 0.015
     marker = Marker()
-    marker.header.frame_id = "map"
+    marker.header.frame_id = "panda_link0"
     marker.header.stamp = rospy.Time.now()
     marker.type = marker.LINE_LIST
     marker.id = id
@@ -115,7 +116,7 @@ def get_marker(id, pose, edge, ns = 'current', alpha=1, red=1, green=1, blue=1):
     marker.color.b = blue
     marker.color.a = alpha
     p1m = Marker()
-    p1m.header.frame_id = "map"
+    p1m.header.frame_id = "panda_link0"
     p1m.header.stamp = rospy.Time.now()
     p1m.type = marker.SPHERE_LIST
     p1m.id = id + 101
@@ -182,7 +183,7 @@ def get_marker_array(current_joints, future_joints, marginal_forecast_joints, co
                                 blue=1.0)
                 marker_array.markers.append(tup[0])
                 marker_array.markers.append(tup[1])
-    r_hand_edges = [(6, 10)]
+    r_hand_edges = [(0,1)]
     if future_joints is not None:
         for idx, edge in enumerate(r_hand_edges):
             for timestep in [15]:
@@ -211,9 +212,11 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Arguments for running the scripts')
     parser.add_argument('--dataset',type=str,default="handover",help="Dataset Type")
-    parser.add_argument('--set_num',type=str,default="0",help="Number of Dataset")
-    parser.add_argument('--ep_num', type=str,default="-1",help="Episode to watch/leave blank if wanting to watch whole set")
-    parser.add_argument('--ros_rate', type=int,default=600,help="Playback Speed")
+    # parser.add_argument('--set_num',type=str,default="0",help="Number of Dataset")
+    parser.add_argument('--ep_num', type=str,default="1",help="Episode to watch/leave blank if wanting to watch whole set")
+    parser.add_argument('--ros_rate', type=int,default=15,help="Playback Speed")
+    parser.add_argument('--task_name', type=str,default="take",help="Episode to watch/leave blank if wanting to watch whole set")
+    parser.add_argument('--set_num', type=str,default="2",help="Episode to watch/leave blank if wanting to watch whole set")
 
     args = parser.parse_args()
 
@@ -238,68 +241,67 @@ if __name__ == '__main__':
 
     person_data = {}
     prev_forecast_joints_A = None
-    if args.ep_num != "-1":
-        while True:
-            # episode_file = f"{dataset_folder}/{args.dataset}_{args.set_num}_{args.ep_num}.json"
-            episode_file = f"hr/test_hr/take_1_2.json"
-            with open(episode_file, 'r') as f:
-                data = json.load(f)
-            for stream_person in data:
-                person_data[stream_person] = fix_orientation(np.array(data[stream_person]))
-                print((person_data[stream_person]).shape)
-            for timestep in range(len(data[list(data.keys())[0]])):
-                print(round(timestep/120, 1))
-                if not pause and listener.running:
-                    joint_data_A = person_data["Atiksh"]
-                    joint_data_B = person_data["Kushal"]
-                    joint_data_R = person_data["Robot"]
-                    current_joints_A = get_relevant_joints(joint_data_A[timestep])
-                    current_joints_B = get_relevant_joints(joint_data_B[timestep])
-                    current_joints_R = get_relevant_joints(joint_data_R[timestep], relevant_joints=['a','b'])
 
-                    T_in = 15
-                    T_out = 15
+    # episode_file = f"{dataset_folder}/{args.dataset}_{args.set_num}_{args.ep_num}.json"
+    episode_file = f"comad/human_robot_data/{args.task_name}_jsons/all/{args.task_name}_{args.set_num}_{args.ep_num}.json"
+    with open(episode_file, 'r') as f:
+        data = json.load(f)
+    for stream_person in data:
+        person_data[stream_person] = fix_orientation(np.array(data[stream_person]))
+        print((person_data[stream_person]).shape)
+    for timestep in range(len(data[list(data.keys())[0]])):
+        print(round(timestep/15, 1))
+        if not pause and listener.running:
+            joint_data_A = person_data["Atiksh"]
+            joint_data_B = person_data["Kushal"]
+            joint_data_R = person_data["Robot"]
+            current_joints_A = get_relevant_joints(joint_data_A[timestep])
+            current_joints_B = get_relevant_joints(joint_data_B[timestep])
+            current_joints_R = get_relevant_joints(joint_data_R[timestep], relevant_joints=['a','b'])
 
-                    history_joints_A = get_history(joint_data_A, timestep, T_in)
-                    history_joints_B = get_history(joint_data_B, timestep, T_in)
-                    history_joints_R = get_history(joint_data_R, timestep, T_in, relevant_joints=['a','b'])
+            T_in = 15
+            T_out = 15
 
-                    future_joints_A = get_future(joint_data_A, timestep, T_out)
-                    future_joints_B = get_future(joint_data_B, timestep, T_out)
-                    future_joints_R = get_future(joint_data_R, timestep, T_out, relevant_joints=['a','b'])
+            history_joints_A = get_history(joint_data_A, timestep, T_in)
+            history_joints_B = get_history(joint_data_B, timestep, T_in)
+            history_joints_R = get_history(joint_data_R, timestep, T_in, relevant_joints=['a','b'])
 
-                    # marginal_forecast_joints_A = get_forecast(marginal_model, history_joints_A, history_joints_B, future_joints_A, future_joints_B, history_joints_R, future_joints_R)
-                    marginal_forecast_joints_B = get_forecast(marginal_model, history_joints_B, history_joints_A, future_joints_B, future_joints_A, history_joints_R, future_joints_R)
-                    
-                    # conditional_forecast_joints_A = get_forecast(conditional_model, history_joints_A, history_joints_B, future_joints_A, future_joints_B, history_joints_R, future_joints_R)
-                    conditional_forecast_joints_B = get_forecast(conditional_model, history_joints_B, history_joints_A, future_joints_B, future_joints_A, history_joints_R, future_joints_R)
+            future_joints_A = get_future(joint_data_A, timestep, T_out)
+            future_joints_B = get_future(joint_data_B, timestep, T_out)
+            future_joints_R = get_future(joint_data_R, timestep, T_out, relevant_joints=['a','b'])
 
-                    # marker_array_A = get_marker_array(current_joints=current_joints_A, 
-                    #                                 future_joints=future_joints_A,
-                    #                                 marginal_forecast_joints=marginal_forecast_joints_A,
-                    #                                 conditional_forecast_joints=conditional_forecast_joints_A,
-                    #                                 person="Atiksh")
-                    # marker_array_B = get_marker_array(current_joints=current_joints_B, 
-                    #                                 future_joints=future_joints_B,
-                    #                                 marginal_forecast_joints=marginal_forecast_joints_B,
-                    #                                 conditional_forecast_joints=conditional_forecast_joints_B,
-                    #                                 person="Kushal")
-                    marker_array_B = get_marker_array(current_joints=current_joints_B, 
-                                                    future_joints=None,
-                                                    marginal_forecast_joints=None,
-                                                    conditional_forecast_joints=None,
-                                                    person="Kushal")
-                                    
-                    # human_A_forecast.publish(marker_array_A)
-                    human_B_forecast.publish(marker_array_B)
+            # marginal_forecast_joints_A = get_forecast(marginal_model, history_joints_A, history_joints_B, future_joints_A, future_joints_B, history_joints_R, future_joints_R)
+            marginal_forecast_joints_B = get_forecast(marginal_model, history_joints_B, history_joints_A, future_joints_B, future_joints_A, history_joints_R, future_joints_R)
+            
+            # conditional_forecast_joints_A = get_forecast(conditional_model, history_joints_A, history_joints_B, future_joints_A, future_joints_B, history_joints_R, future_joints_R)
+            conditional_forecast_joints_B = get_forecast(conditional_model, history_joints_B, history_joints_A, future_joints_B, future_joints_A, history_joints_R, future_joints_R)
 
-                    # if forecast_jumped(forecast_joints_A, prev_forecast_joints_A):
-                    #     pause = True
-                    # prev_forecast_joints_A = forecast_joints_A
-                    rate.sleep()
-                else:
-                    input("Press enter to continue")
-                    pause = False
-                    listener = keyboard.Listener(on_press=on_press)
-                    listener.start()
+            # marker_array_A = get_marker_array(current_joints=current_joints_A, 
+            #                                 future_joints=future_joints_A,
+            #                                 marginal_forecast_joints=marginal_forecast_joints_A,
+            #                                 conditional_forecast_joints=conditional_forecast_joints_A,
+            #                                 person="Atiksh")
+            # marker_array_B = get_marker_array(current_joints=current_joints_B, 
+            #                                 future_joints=future_joints_B,
+            #                                 marginal_forecast_joints=marginal_forecast_joints_B,
+            #                                 conditional_forecast_joints=conditional_forecast_joints_B,
+            #                                 person="Kushal")
+            marker_array_B = get_marker_array(current_joints=current_joints_B, 
+                                            future_joints=future_joints_R,
+                                            marginal_forecast_joints=marginal_forecast_joints_B,
+                                            conditional_forecast_joints=conditional_forecast_joints_B,
+                                            person="Kushal")
+                            
+            # human_A_forecast.publish(marker_array_A)
+            human_B_forecast.publish(marker_array_B)
+
+            # if forecast_jumped(forecast_joints_A, prev_forecast_joints_A):
+            #     pause = True
+            # prev_forecast_joints_A = forecast_joints_A
+            rate.sleep()
+        else:
+            input("Press enter to continue")
+            pause = False
+            listener = keyboard.Listener(on_press=on_press)
+            listener.start()
 
