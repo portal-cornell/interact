@@ -28,6 +28,9 @@ ATIKSH_OFFSETS = {
     'take_2': [1.45, -2.4, -0.75],
     'cabinet_1': [1.35, -0.4, -0.75],
     'cabinet_2': [1.35, -0.4, -0.75],
+    'cart_1': [1.47, -2.4, -0.75],
+    'cart_2': [1.47, -2.4, -0.75],
+    'take_3': [1.47, -2.4, -0.75]
 }
 
 KUSHAL_OFFSETS = {
@@ -35,6 +38,9 @@ KUSHAL_OFFSETS = {
     'take_2': [1.22, -1.3, -0.85],
     'cabinet_1': [0.9, -1.3, -0.85],
     'cabinet_2': [0.9, -1.3, -0.85],
+    'cart_1': [0.9, -1.3, -0.85],
+    'cart_2': [0.9, -1.3, -0.85],
+    'take_3': [0.9, -1.3, -0.85],
 }
 
 class BagReaderHR():
@@ -169,6 +175,7 @@ for timestep in range(10*1500):
     rate.sleep()
 
 clips = []
+task_name = bag_name.split('_')[0]
 for start_frame, end_frame in start_end_times:
     atiksh_arr = np.nan_to_num(atiksh_frames).tolist()
     kushal_arr = np.nan_to_num(kushal_frames).tolist()
@@ -176,7 +183,7 @@ for start_frame, end_frame in start_end_times:
     current_clip = {"Atiksh":atiksh_arr, "Kushal":kushal_arr, "Robot":robot_arr}
     clips.append(current_clip)
 
-with open(f'./comad/human_robot_data/jsons/{bag_name}.json', 'w') as f:
+with open(f'./comad/human_robot_data/{task_name}_jsons/{bag_name}.json', 'w') as f:
     json.dump(clips[0], f, indent=4)
 clips = []
 for start_frame, end_frame in start_end_times:
