@@ -5,7 +5,7 @@ import torch
 import numpy as np
 import torch
 import torch_dct as dct #https://github.com/zh217/torch-dct
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, ConcatDataset
 from utils.comad_hr import CoMaD_HR
 from utils.loss_funcs import mpjpe_loss, fde_error, perjoint_error, perjoint_fde
 from arg_parser import get_parser
@@ -30,7 +30,7 @@ if __name__ == '__main__':
     args = get_parser().parse_args()
     model_results_dict = {}
     ### Change to test set for AMASS
-    Dataset = dataset_map[args.eval_data]()
+    Dataset = ConcatDataset([dataset_map[args.eval_data]()])
     loader_test = DataLoader(
         Dataset,
         batch_size=args.batch_size,

@@ -18,8 +18,8 @@ models = [
           "saved_model_1hist_marginal_withAMASS_alljoints",
           "saved_model_1hist_marginal_withAMASS_alljoints_scratch",
           "saved_model_1hist_marginal_withAMASS_alljoints_ft",
+          "saved_model_2hist_marginal_withAMASS_alljoints_ft",
           "saved_model_2hist_conditional_withAMASS_alljoints_ft",
-          "saved_model_2hist_conditional_withAMASS_handwrist_ft"
         ]
 
 dataset_map = {
@@ -28,19 +28,19 @@ dataset_map = {
     'table_set': lambda: CoMaD(split='test',subtask='table_set')
 }
 
-models = [
-    'saved_model_1hist_marginal_withAMASS_alljoints_ft_hr_noalign_HHonly',
-    'saved_model_1hist_marginal_withAMASS_alljoints_ft_hr_noalign_scratch',
-    'saved_model_1hist_marginal_withAMASS_alljoints_ft_hr_noalign',
-    'saved_model_2hist_conditional_withAMASS_alljoints_ft_hr_noalign',
-    'saved_model_2hist_conditional_withAMASS_alljoints_ft_hr'
-        ]
+# models = [
+#     'saved_model_1hist_marginal_withAMASS_alljoints_ft_hr_noalign_HHonly',
+#     'saved_model_1hist_marginal_withAMASS_alljoints_ft_hr_noalign_scratch',
+#     'saved_model_1hist_marginal_withAMASS_alljoints_ft_hr_noalign',
+#     'saved_model_2hist_conditional_withAMASS_alljoints_ft_hr_noalign',
+#     'saved_model_2hist_conditional_withAMASS_alljoints_ft_hr'
+#         ]
 
-dataset_map = {
-    'cabinet': lambda: CoMaD_HR(split='test',subtask='cabinet'),
-    'take': lambda: CoMaD_HR(split='test',subtask='take'),
-    'cart': lambda: CoMaD_HR(split='test',subtask='cart'),
-}
+# dataset_map = {
+#     'cabinet': lambda: CoMaD_HR(split='test',subtask='cabinet'),
+#     'take': lambda: CoMaD_HR(split='test',subtask='take'),
+#     'cart': lambda: CoMaD_HR(split='test',subtask='cart'),
+# }
 
 if __name__ == '__main__':
     avgs = np.zeros(5)

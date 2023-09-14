@@ -70,8 +70,8 @@ if __name__ == "__main__":
     model_id += f'_{"noAMASS" if args.no_amass else "withAMASS"}_{"handwrist" if args.bob_hand else "alljoints"}'
     writer = SummaryWriter(log_dir=args.log_dir+'/'+model_id)
     
-    train_dataloader = get_dataloader(split='train', batch_size=args.batch_size, include_amass=True, include_CMU_mocap=False, include_COMAD=False)
-    val_dataloader = get_dataloader(split='val', batch_size=args.batch_size, include_amass=True, include_CMU_mocap=True)
+    train_dataloader = get_dataloader(split='train', batch_size=args.batch_size, include_amass=True, include_CMU_mocap=False)
+    # val_dataloader = get_dataloader(split='val', batch_size=args.batch_size, include_amass=True, include_CMU_mocap=True)
     # test_dataloader = get_dataloader(split='test', batch_size=args.batch_size, include_amass=True, include_CMU_mocap=True)
     # amass_dataloader = get_dataloader(split='test', batch_size=args.batch_size, include_amass=True, include_CMU_mocap=False)
     # cmu_mocap_dataloader = get_dataloader(split='test', batch_size=args.batch_size, include_amass=False, include_CMU_mocap=True)
@@ -118,8 +118,8 @@ if __name__ == "__main__":
 
         print(f"train loss after epoch {epoch+1} = ", total_loss.item()/n)
         writer.add_scalar('train/mpjpe', total_loss.item()/n, epoch+1)
-        if (epoch+1)%6 == 0:
-            log_metrics(val_dataloader, 'val', writer, epoch)
+        # if (epoch+1)%6 == 0:
+        #     log_metrics(val_dataloader, 'val', writer, epoch)
             # log_metrics(test_dataloader, 'test', writer, epoch)
             # log_metrics(amass_dataloader, 'amass_test', writer, epoch)
             # log_metrics(cmu_mocap_dataloader, 'cmu_mocap_test', writer, epoch)

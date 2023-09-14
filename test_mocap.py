@@ -5,7 +5,7 @@ import torch
 import numpy as np
 import torch
 import torch_dct as dct #https://github.com/zh217/torch-dct
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, ConcatDataset
 from utils.cmu_mocap import CMU_Mocap
 from utils.comad import CoMaD
 from utils.synthetic_amass import Synthetic_AMASS
@@ -18,14 +18,14 @@ models = [
           "saved_model_1hist_marginal_withAMASS_alljoints",
           "saved_model_1hist_marginal_withAMASS_alljoints_scratch",
           "saved_model_1hist_marginal_withAMASS_alljoints_ft",
+          "saved_model_2hist_marginal_withAMASS_alljoints_ft",
           "saved_model_2hist_conditional_withAMASS_alljoints_ft",
-          "saved_model_2hist_conditional_withAMASS_handwrist_ft"
         ]
 
 dataset_map = {
     'cmu': lambda: CMU_Mocap(split='test'),
-    'handover': lambda: CoMaD(split='test',subtask='handover',transitions=False),
-    'react_stir': lambda: CoMaD(split='test',subtask='react_stir',transitions=False),
+    'handover': lambda: CoMaD(split='test',subtask='handover',transitions=True),
+    'react_stir': lambda: CoMaD(split='test',subtask='react_stir',transitions=True),
     'table_set': lambda: CoMaD(split='test',subtask='table_set')
 }
 
@@ -33,7 +33,7 @@ if __name__ == '__main__':
     args = get_parser().parse_args()
     model_results_dict = {}
     ### Change to test set for AMASS
-    Dataset = dataset_map[args.eval_data]()
+    Dataset = ConcatDataset([dataset_map[args.eval_data]()])
     loader_test = DataLoader(
         Dataset,
         batch_size=args.batch_size,

@@ -75,16 +75,16 @@ if __name__ == "__main__":
     model_id = f'{"1hist" if ONE_HIST else "2hist"}_{"marginal" if not CONDITIONAL else "conditional"}'
     model_id += f'_{"noAMASS" if args.no_amass else "withAMASS"}_{"handwrist" if args.bob_hand else "alljoints"}'
     load_model_id = model_id[:]
-    # model_id += '_ft'
-    model_id += '_scratch'
+    model_id += '_ft_CMUMOCAP'
+    # model_id += '_scratch'
     writer = SummaryWriter(log_dir=args.log_dir+'/'+model_id)
     
-    train_dataloader = get_dataloader(split='train', batch_size=args.batch_size, include_amass=False, include_CMU_mocap=True, include_COMAD=True)
+    train_dataloader = get_dataloader(split='train', batch_size=args.batch_size, include_amass=False, include_CMU_mocap=True, include_COMAD=False)
     # val_dataloader = get_dataloader(split='val', batch_size=args.batch_size, include_amass=(not args.no_amass), include_CMU_mocap=True)
     # test_dataloader = get_dataloader(split='test', batch_size=args.batch_size, include_amass=(not args.no_amass), include_CMU_mocap=True)
     # amass_dataloader = get_dataloader(split='test', batch_size=args.batch_size, include_amass=True, include_CMU_mocap=False)
-    cmu_mocap_dataloader = get_dataloader(split='test', batch_size=args.batch_size, include_amass=False, include_CMU_mocap=True)
-    comad_val_dataloader = get_dataloader(split='val', batch_size=args.batch_size, include_amass=False, include_CMU_mocap=False, include_COMAD=True)
+    # cmu_mocap_dataloader = get_dataloader(split='test', batch_size=args.batch_size, include_amass=False, include_CMU_mocap=True)
+    # comad_val_dataloader = get_dataloader(split='val', batch_size=args.batch_size, include_amass=False, include_CMU_mocap=False, include_COMAD=True)
     # comad_test_dataloader = get_dataloader(split='test', batch_size=args.batch_size, include_amass=False, include_CMU_mocap=False, include_COMAD=True)
     bob_joints_list = list(range(9)) if not args.bob_hand else list(range(5,9))
 
@@ -96,10 +96,10 @@ if __name__ == "__main__":
                 bob_joints_num=len(bob_joints_list),
                 one_hist=ONE_HIST).to(device)
 
-    # model.load_state_dict(torch.load(f'./checkpoints_new_arch_pretrain_final/saved_model_{load_model_id}/{50}.model'))
+    model.load_state_dict(torch.load(f'./checkpoints_new_arch_pretrain_scratch/saved_model_{load_model_id}/{50}.model'))
 
     params = [
-        {"params": model.parameters(), "lr": args.lr_pred}
+        {"params": model.parameters(), "lr": args.lr_ft}
     ]
 
     optimizer = optim.Adam(params,weight_decay=1e-05)
@@ -107,7 +107,7 @@ if __name__ == "__main__":
                 milestones=[15,25,35,40], 
                 gamma=0.1)
 
-    directory = f'./checkpoints_eval/saved_model_{model_id}'
+    directory = f'./checkpoints_eval2/saved_model_{model_id}'
     pathlib.Path(directory).mkdir(parents=True, exist_ok=True)
 
     for epoch in range(args.epochs):
@@ -130,12 +130,12 @@ if __name__ == "__main__":
             n+=batch_dim
 
         print(f"train loss after epoch {epoch+1} = ", total_loss.item()/n)
-        writer.add_scalar('train/mpjpe', total_loss.item()/n, epoch+1)
-        if (epoch+1)%3 == 0:
-            log_metrics(comad_val_dataloader, 'comad_val', writer, epoch)
+        # writer.add_scalar('train/mpjpe', total_loss.item()/n, epoch+1)
+        # if (epoch+1)%3 == 0:
+            # log_metrics(comad_val_dataloader, 'comad_val', writer, epoch)
             # log_metrics(test_dataloader, 'test', writer, epoch)
             # log_metrics(amass_dataloader, 'amass_test', writer, epoch)
-            log_metrics(cmu_mocap_dataloader, 'cmu_mocap_test', writer, epoch)
+            # log_metrics(cmu_mocap_dataloader, 'cmu_mocap_test', writer, epoch)
         
         save_path=f'{directory}/{epoch+1}.model'
         torch.save(model.state_dict(),save_path)
