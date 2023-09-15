@@ -30,7 +30,7 @@ if __name__ == '__main__':
     args = get_parser().parse_args()
     model_results_dict = {}
     ### Change to test set for AMASS
-    Dataset = ConcatDataset([dataset_map[args.eval_data]()])
+    Dataset = ConcatDataset([dataset_map['cabinet'](), dataset_map['take'](), dataset_map['cart']()])
     loader_test = DataLoader(
         Dataset,
         batch_size=args.batch_size,

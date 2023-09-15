@@ -251,7 +251,7 @@ class IntentInformedHRForecaster(nn.Module):
             if not self.hh.one_hist:
                 cos_dist_hist = 1-self.cosine_sim(bob_global_enc, robot_global_enc)
                 align_loss += torch.mean(cos_dist_hist.reshape(-1, 1))
-            if not self.hh.conditional_forecaster:
+            if self.hh.conditional_forecaster:
                 cos_dist_fut = 1-self.cosine_sim(bob_cond_future_enc, robot_cond_future_enc)
                 align_loss += torch.mean(cos_dist_fut.reshape(-1, 1))
 
