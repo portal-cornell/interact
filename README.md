@@ -2,7 +2,7 @@
 
 This is an implementation of the NeurIPS'21 paper "Multi-Person 3D Motion Prediction with Multi-Range Transformers".
 
-Please check our [paper](https://arxiv.org/pdf/2111.12073.pdf) and the [project webpage](https://jiashunwang.github.io/MRT/) for more details. 
+Please check our [paper](https://arxiv.org/pdf/2111.12073.pdf) and the [project webpage](https://portal.github.io/interact/) for more details. 
 
 We will also provide the code to fit our skeleton representation data to [SMPL](https://smpl.is.tue.mpg.de/) data.
 
