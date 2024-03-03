@@ -3,7 +3,7 @@ import numpy as np
 import torch
 import os
 from interact.utils.read_json_data import read_json, get_pose_history, missing_data
-from hydra import compose 
+from hydra import compose, initialize
 # from read_json_data import read_json, get_pose_history
 
 class CoMaD_HR(Dataset):

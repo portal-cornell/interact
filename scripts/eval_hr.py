@@ -9,51 +9,40 @@ from torch.utils.data import DataLoader, ConcatDataset
 from interact.utils.comad_hr import CoMaD_HR
 from interact.utils.loss_funcs import mpjpe_loss, fde_error, perjoint_error, perjoint_fde
 from interact.utils.arg_parser import get_parser
+import hydra
 
+@hydra.main(config_path="../config", config_name="eval")
+def main(cfg):
+    dataset_map = {
+        'cabinet': lambda: CoMaD_HR(split='test',subtask='cabinet'),
+        'take': lambda: CoMaD_HR(split='test',subtask='take'),
+        'cart': lambda: CoMaD_HR(split='test',subtask='cart'),
+    }
 
-### Define models we want to compute metrics for
-models = [
-    'OnlyFineTuned',
-    'Marginal',
-    'InteRACT',
-    'InteRACT-Align'
-        ]
+    models = cfg.hr_eval.models
+    device = "cuda" if torch.cuda.is_available() else "cpu"
 
-dataset_map = {
-    'cabinet': lambda: CoMaD_HR(split='test',subtask='cabinet'),
-    'take': lambda: CoMaD_HR(split='test',subtask='take'),
-    'cart': lambda: CoMaD_HR(split='test',subtask='cart'),
-}
-
-if __name__ == '__main__':
-    args = get_parser().parse_args()
     model_results_dict = {}
-    ### Change to test set for AMASS
-    Dataset = ConcatDataset([dataset_map['cart']()])
+
+    Dataset = ConcatDataset([dataset_map[cfg.hr_eval.eval_data]()])
     loader_test = DataLoader(
         Dataset,
-        batch_size=args.batch_size,
-        shuffle =False,
-        num_workers=0)
+        batch_size = cfg.hr_eval.batch_size,
+        shuffle = False,
+        num_workers = 0)
+
+    model_info_cfg = hydra.compose(config_name="training", overrides=[])
+
     for model_path in models:
         ### Change model to match ConditionalForecaster
-        bob_joints_list = list(range(9)) if not 'handwrist' in model_path else list(range(5,9))
-        robot_joints_list = [6,8]
 
-        model = IntentInformedHRForecaster(d_word_vec=128, d_model=128, d_inner=1024,
-                n_layers=3, n_head=8, d_k=64, d_v=64,
-                device='cuda',
-                conditional_forecaster='conditional' in model_path,
-                bob_joints_list=bob_joints_list,
-                bob_joints_num=len(bob_joints_list),
-                one_hist='1hist' in model_path,
-                robot_joints_list=robot_joints_list,
-                robot_joints_num=2,
-                align_rep='noalign' not in model_path).to('cuda')
+        model_config = model_info_cfg.hr_models[model_path]
+        model = hydra.utils.instantiate(
+            model_config,
+            device=device
+        ).to(device)
 
-
-        args.prediction_method = "neural"
-        model.load_state_dict(torch.load(f'./interact/HR_checkpoints/{model_path}/{50}.model'))
+        model.load_state_dict(torch.load(f'{cfg.hr_eval.checkpoint_dir}/{model_path}/{30}.model'))
         model.eval()
 
         ### Set up metrics we want to compute
@@ -75,8 +64,7 @@ if __name__ == '__main__':
                 robot_hist, robot_fut = [(batch[i].reshape(batch[i].shape[0], batch[i].shape[1], -1) - offset[:, :, -6:]).to('cuda') for i in range(4,6)]
                 batch_dim = alice_hist.shape[0]
                 n += batch_dim
-                if args.prediction_method == "neural":
-                    alice_forecasts, alignment_loss = model(alice_hist, bob_hist, bob_fut, robot_hist, robot_fut)
+                alice_forecasts, alignment_loss = model(alice_hist, bob_hist, bob_fut, robot_hist, robot_fut)
             
                 ### Compute the different losses to report
                 loss = mpjpe_loss(alice_forecasts, alice_fut)
@@ -116,7 +104,7 @@ if __name__ == '__main__':
         #     np.save(f, wrist_fde_std)
     
     ### Print out all the results
-    print('DATASET: ' + args.eval_data)
+    print('DATASET: ' + cfg.hr_eval.eval_data)
     metrics = ['all_joints','wrist']
     for metric in metrics:
         for model_path in models:
@@ -128,3 +116,6 @@ if __name__ == '__main__':
                 print('&', end='')
         print()
         print('='*20)
+
+if __name__ == "__main__":
+    main()

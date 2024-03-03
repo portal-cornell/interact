@@ -1,0 +1,22 @@
+base_dev_dir: '/share/portal/pd337/interact'
+
+hh_eval:
+  eval_data: cmu
+    # choices: [cmu, handover, react_stir, table_set]
+
+  models: ['OnlyFineTuned', 'Marginal', 'Marginal-2Hist', 'InteRACT']
+
+  batch_size: 256
+
+  checkpoint_dir: '${base_dev_dir}/interact/checkpoints/HH_checkpoints'
+
+hr_eval:
+  eval_data: cabinet
+    # choices: [cabinet, take, cart]
+
+  models: ['OnlyFineTuned', 'Marginal', 'InteRACT', 'InteRACT-Align']
+
+  batch_size: 256
+
+  checkpoint_dir: '${base_dev_dir}/interact/checkpoints/HR_checkpoints'
+

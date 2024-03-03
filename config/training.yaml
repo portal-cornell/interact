@@ -21,7 +21,7 @@ Training:
 
 
 
-models:
+hh_models:
   InteRACT: 
     _target_: interact.model.Models.IntentInformedForecaster
     one_hist: false
@@ -50,7 +50,6 @@ models:
     one_hist: true
     conditional_forecaster: false
     
-
   Marginal-2Hist:
     _target_: interact.model.Models.IntentInformedForecaster
     one_hist: false
@@ -63,6 +62,20 @@ models:
     n_head: 8
     d_k: 64
     d_v: 64
+    conditional_forecaster: false
+
+  OnlyFineTuned:
+    _target_: interact.model.Models.IntentInformedForecaster
+    bob_joints_list: [0, 1, 2, 3, 4, 5, 6, 7, 8]
+    bob_joints_num: 9
+    d_word_vec: 128
+    d_model: 128
+    d_inner: 1024
+    n_layers: 3
+    n_head: 8
+    d_k: 64
+    d_v: 64
+    one_hist: true
     conditional_forecaster: false
 
 hr_models: 
@@ -86,6 +99,39 @@ hr_models:
     _target_: interact.model.Models.IntentInformedHRForecaster
     one_hist: false
     conditional_forecaster: true
+    bob_joints_list: [0, 1, 2, 3, 4, 5, 6, 7, 8]
+    bob_joints_num: 9
+    d_word_vec: 128
+    d_model: 128
+    d_inner: 1024
+    n_layers: 3
+    n_head: 8
+    d_k: 64
+    d_v: 64
+    robot_joints_list: [6, 8]
+    robot_joints_num: 2
+    align_rep: false
+
+  Marginal:
+    _target_: interact.model.Models.IntentInformedHRForecaster
+    one_hist: true
+    conditional_forecaster: false
+    bob_joints_list: [0, 1, 2, 3, 4, 5, 6, 7, 8]
+    bob_joints_num: 9
+    d_word_vec: 128
+    d_model: 128
+    d_inner: 1024
+    n_layers: 3
+    n_head: 8
+    d_k: 64
+    d_v: 64
+    robot_joints_list: [6, 8]
+    align_rep: false
+
+  OnlyFineTuned:
+    _target_: interact.model.Models.IntentInformedHRForecaster
+    one_hist: true
+    conditional_forecaster: false
     bob_joints_list: [0, 1, 2, 3, 4, 5, 6, 7, 8]
     bob_joints_num: 9
     d_word_vec: 128

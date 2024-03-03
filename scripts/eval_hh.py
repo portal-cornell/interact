@@ -11,51 +11,41 @@ from interact.utils.comad import CoMaD
 from interact.utils.synthetic_amass import Synthetic_AMASS
 from interact.utils.loss_funcs import mpjpe_loss, fde_error, perjoint_error, perjoint_fde
 from interact.utils.arg_parser import get_parser
+import hydra
 
+@hydra.main(config_path="../config", config_name="eval")
+def main(cfg):
+    dataset_map = {
+        'cmu': lambda: CMU_Mocap(split='test'),
+        'handover': lambda: CoMaD(split='test',subtask='handover',transitions=True),
+        'react_stir': lambda: CoMaD(split='test',subtask='react_stir',transitions=True),
+        'table_set': lambda: CoMaD(split='test',subtask='table_set')
+    }
 
-### Define models we want to compute metrics for
-models = [
-          "OnlyFineTuned",
-          "Marginal",
-          "Marginal-2Hist",
-          "InteRACT",
-        ]
+    models = cfg.hh_eval.models
+    device = "cuda" if torch.cuda.is_available() else "cpu"
 
-dataset_map = {
-    'cmu': lambda: CMU_Mocap(split='test'),
-    'handover': lambda: CoMaD(split='test',subtask='handover',transitions=True),
-    'react_stir': lambda: CoMaD(split='test',subtask='react_stir',transitions=True),
-    'table_set': lambda: CoMaD(split='test',subtask='table_set')
-}
-
-if __name__ == '__main__':
-    args = get_parser().parse_args()
     model_results_dict = {}
-    ### Change to test set for AMASS
-    Dataset = ConcatDataset([dataset_map[args.eval_data]()])
+
+    Dataset = ConcatDataset([dataset_map[cfg.hh_eval.eval_data]()])
     loader_test = DataLoader(
         Dataset,
-        batch_size=args.batch_size,
-        shuffle =False,
-        num_workers=0)
-    for model_path in models:
-        ### Change model to match ConditionalForecaster
-        bob_joints_list = list(range(9)) if not 'handwrist' in model_path else list(range(5,9))
-        model = IntentInformedForecaster(d_word_vec=128, d_model=128, d_inner=1024,
-                n_layers=3, n_head=8, d_k=64, d_v=64,
-                device='cuda',
-                conditional_forecaster='conditional' in model_path,
-                bob_joints_list=bob_joints_list,
-                bob_joints_num=len(bob_joints_list),
-                one_hist='1hist' in model_path).to('cuda')
+        batch_size = cfg.hh_eval.batch_size,
+        shuffle = False,
+        num_workers = 0)
 
-        ### Load state dict of that model
-        args.prediction_method = "neural"
-        model.load_state_dict(torch.load(f'./interact/HH_checkpoints/{model_path}/{50}.model'))
+    model_info_cfg = hydra.compose(config_name="training", overrides=[])
+    
+    for model_path in models:
+        model_config = model_info_cfg.hh_models[model_path]
+        model = hydra.utils.instantiate(
+            model_config,
+            device=device
+        ).to(device)
+
+        model.load_state_dict(torch.load(f'{cfg.hh_eval.checkpoint_dir}/{model_path}/{30}.model'))
         model.eval()
 
-        ### Set up metrics we want to compute
-        # MPJPE, FDE, Hand/Wrist Errors
         running_loss=0
         running_per_joint_error=0
         running_fde=0
@@ -65,16 +55,13 @@ if __name__ == '__main__':
         n=0
         with torch.no_grad():
             for cnt,batch in enumerate(loader_test): 
-                # Match forward pass at train time
                 offset = batch[0].reshape(batch[0].shape[0], 
                                         batch[0].shape[1], -1)[:, -1].unsqueeze(1)
                 alice_hist, alice_fut, bob_hist, bob_fut = [(b.reshape(b.shape[0], 
-                                            b.shape[1], -1) - offset).to('cuda') for b in batch]
+                                            b.shape[1], -1) - offset).to(device) for b in batch]
                 batch_dim = alice_hist.shape[0]
                 n += batch_dim
-                if args.prediction_method == "neural":
-                    alice_forecasts = model(alice_hist, bob_hist, bob_fut)
-                ### Compute the different losses to report
+                alice_forecasts = model(alice_hist, bob_hist, bob_fut)
                 loss = mpjpe_loss(alice_forecasts, alice_fut)
                 per_joint_error, per_joint_error_list = perjoint_error(alice_forecasts, alice_fut)
                 fde = fde_error(alice_forecasts, alice_fut)   
@@ -87,7 +74,6 @@ if __name__ == '__main__':
                 running_per_joint_error += per_joint_error*batch_dim
                 running_fde += fde*batch_dim
         
-        ### Get mean and std of each metric
         all_joints_ade_mean = np.array(running_per_joint_errors).mean(axis=1).mean()*1000
         all_joints_ade_std = np.array(running_per_joint_errors).mean(axis=1).std()*1000/np.sqrt((n))
 
@@ -106,12 +92,8 @@ if __name__ == '__main__':
             'wrist_ade': [wrist_ade_mean, wrist_ade_std],
             'wrist_fde': [wrist_fde_mean, wrist_fde_std],
         }
-        # with open(f'./metrics/{args.eval_data}_{model_path}.npy', 'wb') as f:
-        #     np.save(f, wrist_fde_mean)
-        #     np.save(f, wrist_fde_std)
-    
-    ### Print out all the results
-    print('DATASET: ' + args.eval_data)
+
+    print('DATASET: ' + cfg.hh_eval.eval_data)
     metrics = ['all_joints','wrist']
     for metric in metrics:
         for model_path in models:
@@ -123,4 +105,6 @@ if __name__ == '__main__':
                 print('&', end='')
         print()
         print('='*20)
-    
+
+if __name__ == "__main__":
+    main()
