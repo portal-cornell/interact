@@ -6,7 +6,7 @@ cmu_mocap: '${data_dir}/cmu_mocap'
 comad: '${data_dir}/comad_data'
 comad_hr: '${data_dir}/comad_hr'
 synthetic_amass: '${data_dir}/synthetic_amass'
-comad_transitions: '${comad}/test_transitions.json'
+comad_transitions: '${comad}/test_transition.json'
 
 mapping_dir: '${data_dir}/mapping'
 

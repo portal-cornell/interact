@@ -5,6 +5,8 @@ import torch.optim as optim
 import numpy as np
 import torch_dct as dct #https://github.com/zh217/torch-dct
 import time
+import hydra
+from omegaconf import DictConfig
 
 from interact.model.Models import IntentInformedForecaster
 from interact.utils.loss_funcs import mpjpe_loss
@@ -66,70 +68,67 @@ def log_metrics(dataloader, split, writer, epoch):
     print(f"{split} loss after epoch {epoch+1} = ", total_loss.item()/n)
     writer.add_scalar(f'{split}/mpjpe', total_loss.item()/n, epoch+1)
 
-if __name__ == "__main__":
-    args = get_parser().parse_args()
-
-    ONE_HIST = args.one_hist
-    CONDITIONAL = args.conditional
-
+@hydra.main(config_path="../config", config_name="training")
+def main(cfg: DictConfig):
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
+    selected_model = cfg.selected_model
+    model_config = cfg.models[selected_model] 
+
+    ONE_HIST = model_config.one_hist
+    CONDITIONAL = model_config.conditional_forecaster
+
     model_id = f'{"1hist" if ONE_HIST else "2hist"}_{"marginal" if not CONDITIONAL else "conditional"}'
-    model_id += f'_{"noAMASS" if args.no_amass else "withAMASS"}_{"handwrist" if args.bob_hand else "alljoints"}'
     load_model_id = model_id[:]
-    # model_id += '_ft_CMUMOCAP'
-    # model_id += '_scratch'
-    writer = SummaryWriter(log_dir=args.log_dir+'/'+model_id)
+    model_id += '_ft'
+    writer = SummaryWriter(log_dir=f"{cfg.Training.log_dir}/{model_id}")
+
+    train_dataloader = get_dataloader(split='train', batch_size=cfg.Training.batch_size, include_amass=False, include_CMU_mocap=False, include_COMAD=True)
+    # val_dataloader = get_dataloader(split='val', batch_size=cfg.batch_size, include_amass=(not cfg.no_amass), include_CMU_mocap=True)
+    # test_dataloader = get_dataloader(split='test', batch_size=cfg.batch_size, include_amass=(not cfg.no_amass), include_CMU_mocap=True)
+    # amass_dataloader = get_dataloader(split='test', batch_size=cfg.batch_size, include_amass=True, include_CMU_mocap=False)
+    # cmu_mocap_dataloader = get_dataloader(split='test', batch_size=cfg.batch_size, include_amass=False, include_CMU_mocap=True)
+    # comad_val_dataloader = get_dataloader(split='val', batch_size=cfg.batch_size, include_amass=False, include_CMU_mocap=False, include_COMAD=True)
+    # comad_test_dataloader = get_dataloader(split='test', batch_size=cfg.batch_size, include_amass=False, include_CMU_mocap=False, include_COMAD=True)
     
-    train_dataloader = get_dataloader(split='train', batch_size=args.batch_size, include_amass=False, include_CMU_mocap=False, include_COMAD=True)
-    # val_dataloader = get_dataloader(split='val', batch_size=args.batch_size, include_amass=(not args.no_amass), include_CMU_mocap=True)
-    # test_dataloader = get_dataloader(split='test', batch_size=args.batch_size, include_amass=(not args.no_amass), include_CMU_mocap=True)
-    # amass_dataloader = get_dataloader(split='test', batch_size=args.batch_size, include_amass=True, include_CMU_mocap=False)
-    # cmu_mocap_dataloader = get_dataloader(split='test', batch_size=args.batch_size, include_amass=False, include_CMU_mocap=True)
-    # comad_val_dataloader = get_dataloader(split='val', batch_size=args.batch_size, include_amass=False, include_CMU_mocap=False, include_COMAD=True)
-    # comad_test_dataloader = get_dataloader(split='test', batch_size=args.batch_size, include_amass=False, include_CMU_mocap=False, include_COMAD=True)
-    bob_joints_list = list(range(9)) if not args.bob_hand else list(range(5,9))
+    model = hydra.utils.instantiate(
+        model_config,
+        device=device
+    ).to(device)
 
-    model = IntentInformedForecaster(d_word_vec=128, d_model=128, d_inner=1024,
-                n_layers=3, n_head=8, d_k=64, d_v=64,
-                device=device,
-                conditional_forecaster=CONDITIONAL,
-                bob_joints_list=bob_joints_list,
-                bob_joints_num=len(bob_joints_list),
-                one_hist=ONE_HIST).to(device)
-
-    model.load_state_dict(torch.load(f'./interact/checkpoints/trained_HH_checkpoints/{load_model_id}/{50}.model'))
+    model.load_state_dict(torch.load(
+        f'{cfg.Training.pretraining.output_dir}/{load_model_id}/{30}.model'))
 
     params = [
-        {"params": model.parameters(), "lr": args.lr_ft}
+        {"params": model.parameters(), "lr": cfg.Training.lr_ft}
     ]
 
-    optimizer = optim.Adam(params,weight_decay=1e-05)
-    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, 
-                milestones=[15,25,35,40], 
-                gamma=0.1)
+    optimizer = optim.Adam(params, weight_decay=cfg.Training.weight_decay)
+    scheduler = optim.lr_scheduler.MultiStepLR(optimizer,
+                                               milestones=cfg.Training.scheduler.milestones,
+                                               gamma=cfg.Training.scheduler.gamma)
 
-    directory = f'./interact/checkpoints/finetuned_HH_checkpoints/{model_id}'
+    directory = f'{cfg.Training.finetuning.output_dir}/{model_id}'
     pathlib.Path(directory).mkdir(parents=True, exist_ok=True)
 
-    for epoch in range(args.epochs):
-        total_loss, total_mpjpe, n = 0, 0, 0
+    for epoch in range(cfg.Training.epochs):
+        total_loss, n = 0, 0
         model.train()
         for j, batch in enumerate(train_dataloader):
-            offset = batch[0].reshape(batch[0].shape[0], 
-                                        batch[0].shape[1], -1)[:, -1].unsqueeze(1)
-            alice_hist, alice_fut, bob_hist, bob_fut = [(b.reshape(b.shape[0], 
-                                        b.shape[1], -1) - offset).to(device) for b in batch]
+            offset = batch[0].reshape(
+                batch[0].shape[0], batch[0].shape[1], -1)[:, -1].unsqueeze(1)
+            alice_hist, alice_fut, bob_hist, bob_fut = [(b.reshape(b.shape[0],
+                                                                    b.shape[1], -1) - offset).to(device) for b in batch]
             alice_forecasts = model(alice_hist, bob_hist, bob_fut)
             loss = mpjpe_loss(alice_forecasts, alice_fut)
-                
+
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            
+
             batch_dim = alice_hist.shape[0]
-            total_loss+=loss*batch_dim
-            n+=batch_dim
+            total_loss += loss * batch_dim
+            n += batch_dim
 
         print(f"train loss after epoch {epoch+1} = ", total_loss.item()/n)
         # writer.add_scalar('train/mpjpe', total_loss.item()/n, epoch+1)
@@ -139,7 +138,10 @@ if __name__ == "__main__":
             # log_metrics(amass_dataloader, 'amass_test', writer, epoch)
             # log_metrics(cmu_mocap_dataloader, 'cmu_mocap_test', writer, epoch)
         
-        save_path=f'{directory}/{epoch+1}.model'
-        torch.save(model.state_dict(),save_path)
+        save_path = f'{directory}/{epoch+1}.model'
+        torch.save(model.state_dict(), save_path)
         scheduler.step()
-    
+
+
+if __name__ == "__main__":
+    main()

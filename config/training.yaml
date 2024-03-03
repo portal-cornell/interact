@@ -5,13 +5,20 @@ Training:
   epochs: 30
   batch_size: 256
   log_dir: "${base_dev_dir}/logs/logs_default"
-  lr_pred: 0.0001
+  lr_pred: 0.0003
+  lr_ft: 0.0001
   weight_decay: 0.00001
+  align_weight: 0.1
   scheduler:
     milestones: [15, 25, 35, 40]
     gamma: 0.1
   pretraining:
     output_dir: '${base_dev_dir}/interact/checkpoints/trained_HH_checkpoints'
+  finetuning:
+    output_dir: '${base_dev_dir}/interact/checkpoints/finetuned_HH_checkpoints'
+  hr_training:
+    output_dir: '${base_dev_dir}/interact/checkpoints/trained_HR_checkpoints'
+
 
 
 models:
@@ -58,5 +65,39 @@ models:
     d_v: 64
     conditional_forecaster: false
 
-# can override the selected model with command line arg
+hr_models: 
+  InteRACT-Align:
+    _target_: interact.model.Models.IntentInformedHRForecaster
+    one_hist: false
+    conditional_forecaster: true
+    bob_joints_list: [0, 1, 2, 3, 4, 5, 6, 7, 8]
+    bob_joints_num: 9
+    d_word_vec: 128
+    d_model: 128
+    d_inner: 1024
+    n_layers: 3
+    n_head: 8
+    d_k: 64
+    d_v: 64
+    robot_joints_list: [6, 8]
+    align_rep: true
+
+  InteRACT:
+    _target_: interact.model.Models.IntentInformedHRForecaster
+    one_hist: false
+    conditional_forecaster: true
+    bob_joints_list: [0, 1, 2, 3, 4, 5, 6, 7, 8]
+    bob_joints_num: 9
+    d_word_vec: 128
+    d_model: 128
+    d_inner: 1024
+    n_layers: 3
+    n_head: 8
+    d_k: 64
+    d_v: 64
+    robot_joints_list: [6, 8]
+    align_rep: false
+
+# can override the selected models with command line args
 selected_model: 'InteRACT'
+selected_hr_model: 'InteRACT-Align'
