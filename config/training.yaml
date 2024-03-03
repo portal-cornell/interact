@@ -1,0 +1,62 @@
+base_dev_dir: '/share/portal/pd337/interact'
+
+
+Training:
+  epochs: 30
+  batch_size: 256
+  log_dir: "${base_dev_dir}/logs/logs_default"
+  lr_pred: 0.0001
+  weight_decay: 0.00001
+  scheduler:
+    milestones: [15, 25, 35, 40]
+    gamma: 0.1
+  pretraining:
+    output_dir: '${base_dev_dir}/interact/checkpoints/trained_HH_checkpoints'
+
+
+models:
+  InteRACT: 
+    _target_: interact.model.Models.IntentInformedForecaster
+    one_hist: false
+    conditional_forecaster: true
+    bob_joints_list: [0, 1, 2, 3, 4, 5, 6, 7, 8]
+    bob_joints_num: 9
+    d_word_vec: 128
+    d_model: 128
+    d_inner: 1024
+    n_layers: 3
+    n_head: 8
+    d_k: 64
+    d_v: 64
+
+  Marginal:
+    _target_: interact.model.Models.IntentInformedForecaster
+    bob_joints_list: [0, 1, 2, 3, 4, 5, 6, 7, 8]
+    bob_joints_num: 9
+    d_word_vec: 128
+    d_model: 128
+    d_inner: 1024
+    n_layers: 3
+    n_head: 8
+    d_k: 64
+    d_v: 64
+    one_hist: true
+    conditional_forecaster: false
+    
+
+  Marginal-2Hist:
+    _target_: interact.model.Models.IntentInformedForecaster
+    one_hist: false
+    bob_joints_list: [0, 1, 2, 3, 4, 5, 6, 7, 8]
+    bob_joints_num: 9
+    d_word_vec: 128
+    d_model: 128
+    d_inner: 1024
+    n_layers: 3
+    n_head: 8
+    d_k: 64
+    d_v: 64
+    conditional_forecaster: false
+
+# can override the selected model with command line arg
+selected_model: 'InteRACT'

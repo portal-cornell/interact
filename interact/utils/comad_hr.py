@@ -3,32 +3,30 @@ import numpy as np
 import torch
 import os
 from interact.utils.read_json_data import read_json, get_pose_history, missing_data
+from hydra import compose 
 # from read_json_data import read_json, get_pose_history
 
 class CoMaD_HR(Dataset):
 
     def __init__(
             self, 
-            data_dir = './interact/data/new_hr', 
+            # data_dir = './interact/data/new_hr', 
             input_n = 15,
             output_n = 15,
             sample_rate = 15,
             output_rate = 15,
-            mapping_json = "./interact/data/mapping/comad_mapping.json", 
+            # mapping_json = "./interact/data/mapping/comad_mapping.json", 
             split='train',
             subtask=None
             ):
-        """
-        data_dir := './comad_data'
-        mapping_file := './mapping/comad_mapping.json'
-        """
-        self.data_dir = data_dir
+        cfg = compose(config_name="datasets", overrides=[])
+        self.data_dir = cfg.comad_hr
         self.input_frames = input_n 
         self.output_frames = output_n 
         self.sample_rate = sample_rate
         self.output_rate = output_rate
         self.split = split
-        self.mapping_json = mapping_json
+        self.mapping_json = cfg.comad_mapping
 
         self.alice_input, self.alice_output = [], []
         self.bob_input, self.bob_output = [], []

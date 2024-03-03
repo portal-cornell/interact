@@ -3,6 +3,7 @@ import numpy as np
 import torch
 import os
 from interact.utils.read_json_data import read_json, get_pose_history, missing_data
+from hydra import compose 
 # from read_json_data import read_json, get_pose_history
 
 def convert_time_to_frame(time, hz, offset):
@@ -14,29 +15,25 @@ class CoMaD(Dataset):
 
     def __init__(
             self, 
-            data_dir = './interact/data/comad_data', 
+            # data_dir = './interact/data/comad_data', 
             input_n = 15,
             output_n = 15,
             sample_rate = 120,
             output_rate = 15,
-            mapping_json = "./interact/data/mapping/comad_mapping.json", 
-            transition_file = "./interact/data/comad_data/test_transition.json",
+            # mapping_json = "./interact/data/mapping/comad_mapping.json", 
+            # transition_file = "./interact/data/comad_data/test_transition.json",
             split='train',
             subtask=None,
             transitions=False
             ):
-        """
-        data_dir := './comad_data'
-        mapping_file := './mapping/comad_mapping.json'
-        transition_file := './comad_data/test_transition.json'
-        """
-        self.data_dir = data_dir
+        cfg = compose(config_name="datasets", overrides=[])
+        self.data_dir = cfg.comad
         self.input_frames = input_n 
         self.output_frames = output_n 
         self.sample_rate = sample_rate
         self.output_rate = output_rate
         self.split = split
-        self.mapping_json = mapping_json
+        self.mapping_json = cfg.comad_mapping
 
         self.alice_input, self.alice_output = [], []
         self.bob_input, self.bob_output = [], []
@@ -52,7 +49,7 @@ class CoMaD(Dataset):
         mapping = read_json(self.mapping_json)
         self.joint_used = np.array([mapping[joint_name] for joint_name in joint_names])
 
-        transition_json = read_json(transition_file)
+        transition_json = read_json(cfg.comad_transitions)
         # print(transition_json)
         self.transition_map = {k[:-2]: {} for k in transition_json.keys()}
         for k, v in transition_json.items():

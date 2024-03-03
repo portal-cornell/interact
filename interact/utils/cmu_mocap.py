@@ -3,30 +3,29 @@ import numpy as np
 import torch
 import os
 from interact.utils.read_json_data import read_json, get_pose_history
+from hydra import compose 
 # from read_json_data import read_json, get_pose_history
+
 class CMU_Mocap(Dataset):
 
     def __init__(
             self, 
-            data_dir = './interact/data/cmu_mocap', 
+            # data_dir = './interact/data/cmu_mocap', 
             input_n = 15,
             output_n = 15,
             sample_rate = 120,
             output_rate = 15,
-            mapping_json = "./interact/data/mapping/mocap_mapping.json", 
+            # mapping_json = "./interact/data/mapping/mocap_mapping.json", 
             split='train'
             ):
-        """
-        data_dir := './mocap_data'
-        mapping_file := './mapping.json'
-        """
-        self.data_dir = data_dir
+        cfg = compose(config_name="datasets", overrides=[])
+        self.data_dir = cfg.cmu_mocap
         self.input_frames = input_n 
         self.output_frames = output_n 
         self.sample_rate = sample_rate
         self.output_rate = output_rate
         self.split = split
-        self.mapping_json = mapping_json
+        self.mapping_json = cfg.mocap_mapping
 
         self.alice_input, self.alice_output = [], []
         self.bob_input, self.bob_output = [], []
