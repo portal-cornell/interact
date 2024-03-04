@@ -1,75 +1,101 @@
-# MRT
+# InteRACT: Transformer Models for Human Intent Prediction Conditioned on Robot Actions
 
-This is an implementation of the NeurIPS'21 paper "Multi-Person 3D Motion Prediction with Multi-Range Transformers".
+[Kushal Kedia](https://kushal2000.github.io/), [Atiksh Bhardwaj](https://portal-cornell.github.io/), [Prithwish Dan](https://portfolio-pdan101.vercel.app/), [Sanjiban Choudhury](https://www.sanjibanchoudhury.com/)
 
-Please check our [paper](https://arxiv.org/pdf/2111.12073.pdf) and the [project webpage](https://jiashunwang.github.io/MRT/) for more details. 
+Cornell University
 
-We will also provide the code to fit our skeleton representation data to [SMPL](https://smpl.is.tue.mpg.de/) data.
+**ICRA 2024** 
 
-## Citation
+[Project Page](https://portal-cornell.github.io/interact/) | [arxiv](https://arxiv.org/abs/2311.12943)
 
-If you find our code or paper useful, please consider citing:
-```
-@article{wang2021multi,
-  title={Multi-Person 3D Motion Prediction with Multi-Range Transformers},
-  author={Wang, Jiashun and Xu, Huazhe and Narasimhan, Medhini and Wang, Xiaolong},
-  journal={Advances in Neural Information Processing Systems},
-  volume={34},
-  year={2021}
-}
-```
 
-## Dependencies
+## Installation
 
-Requirements:
-- python3.6
-- pytorch==1.1.0
-- [torch_dct](https://github.com/zh217/torch-dct)
-- [AMCParser](https://github.com/CalciferZh/AMCParser)
+Follow these steps to install `InteRACT`:
 
-## Datasets
-We provide the data preprocessing code of [CMU-Mocap](http://mocap.cs.cmu.edu/) and [MuPoTS-3D](http://vcai.mpi-inf.mpg.de/projects/SingleShotMultiPerson/) (others are coming soon). 
-For CMU-Mocap, the dictionary tree is like
-``` 
-   mocap
-   ├── amc_parser.py
-   ├── mix_mocap.py
-   ├── preprocess_mocap.py
-   ├── vis.py
-   └── all_asfamc
-       └── subjects
-           ├── 01
-           ...
-```
-After dowloading the original data, please try
-```
-python ./mocap/preprocess_mocap.py
-python ./mocap/mix_mocap.py
-```
-For MuPoTS-3D, the dictionary tree is like
-``` 
-   mupots3d
-   ├── preprocess_mupots.py
-   ├── vis.py
-   └── data
-       ├── TS1
-       ...
-```
-After dowloading the original data, please try
-```
-python ./mocap/preprocess_mupots.py
-```
- 
+1. Create and activate the conda environment:
+   ```bash
+   cd interact
+   conda create --name interact python=3.8.16
+   conda activate interact
+   pip install -r requirements.txt
+   pip install -e . 
+   ```
+
+## Preliminaries
+
+1. Set the `base_dev_dir` to your working directory in all of the config files
+
+2. Create a new directory for data under interact so that the repo has the following structure:
+  ### Repo Structure
+  ```
+  ├── config
+  │   ├── *.yaml files 
+  ├── interact
+  |   ├── checkpoints
+  |     ├── HH_checkpoints
+  |     ├── HR_checkpoints
+  |   ├── data
+  |     ├── cmu_mocap
+  |     ├── comad_data
+  |     ├── comad_hr
+  |     ├── mapping
+  |     ├── synthetic_amass
+  |   ├── model
+  |     ├── model architecture files...
+  |   ├── utils
+  |     ├── utility files...
+  |   ├── scripts
+  |     ├── eval_hh.py / eval_hr.py        <- evaluation scripts
+  |     ├── pretrain_intent_forecaster.py  <- pretraining on H-H 
+  |     |── finetune_intent_forecaster.py  <- finetuning on H-H
+  |     |── hr_transfer.py                 <- transferring to H-R
+  |
+  ├── environment.yml
+  ├── README.md
+  ├── setup.py
+
+  ```
+
+3. Download the data (TODO)
+
+
 ## Training
-To train our model, please try
-```
-python train_mrt.py
-```
 
-## Evaluation and visualization
-We provide the evaluation and visualization code in `test.py`
+1. Run the pretraining script on large-scale H-H data:
+   ```bash
+   python scripts/pretrain_intent_forecaster.py
+   ```
+2. Run the finetuning script on H-H interaction data. 
+    ```bash
+    python scripts/finetune_intent_forecaster.py
+    ```
+3. Run the script to transfer the model to  the H-R setting. 
+    ```bash
+    python scripts/hr_transfer.py
+    ```
 
-## Acknowledgement
-This work was supported, in part, by grants from DARPA LwLL, NSF CCF-2112665 (TILOS), NSF 1730158 CI-New: Cognitive Hardware and Software Ecosystem Community Infrastructure (CHASE-CI), NSF ACI-1541349 CC\*DNI Pacific Research Platform, and gifts from Qualcomm, TuSimple and Picsart.
-Part of our code is based on [attention-is-all-you-need-pytorch](https://github.com/jadore801120/attention-is-all-you-need-pytorch) and [AMCParser](https://github.com/CalciferZh/AMCParser). Many thanks!
+## Evaluation
 
+1. Run the evaluation script for H-H:
+   ```bash
+   python scripts/eval_hh.py
+   ```
+2. Run the evaluation script for H-R: 
+    ```bash
+    python scripts/eval_hr.py
+    ```
+
+
+### BibTeX
+   ```bash
+   @article{kedia2023interact,
+    title={InteRACT: Transformer Models for Human Intent Prediction Conditioned on Robot Actions},
+    author={Kedia, Kushal and Bhardwaj, Atiksh and Dan, Prithwish and Choudhury, Sanjiban},
+    journal={arXiv preprint arXiv:2311.12943},
+    year={2023}
+  }
+   ``` 
+
+### Acknowledgement
+* MRT is adapted from [MRT](https://github.com/jiashunwang/MRT)

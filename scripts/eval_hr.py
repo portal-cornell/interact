@@ -42,7 +42,7 @@ def main(cfg):
             device=device
         ).to(device)
 
-        model.load_state_dict(torch.load(f'{cfg.hr_eval.checkpoint_dir}/{model_path}/{30}.model'))
+        model.load_state_dict(torch.load(f'{cfg.hr_eval.checkpoint_dir}/{model_path}/{30}.model', map_location=torch.device(device)))
         model.eval()
 
         ### Set up metrics we want to compute

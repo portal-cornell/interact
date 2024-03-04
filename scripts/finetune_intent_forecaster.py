@@ -97,7 +97,7 @@ def main(cfg: DictConfig):
     ).to(device)
 
     model.load_state_dict(torch.load(
-        f'{cfg.Training.pretraining.output_dir}/{load_model_id}/{30}.model'))
+        f'{cfg.Training.pretraining.output_dir}/{load_model_id}/{30}.model', map_location=torch.device(device)))
 
     params = [
         {"params": model.parameters(), "lr": cfg.Training.lr_ft}

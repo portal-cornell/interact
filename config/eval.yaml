@@ -1,7 +1,7 @@
 base_dev_dir: '/share/portal/pd337/interact'
 
 hh_eval:
-  eval_data: cmu
+  eval_data: handover
     # choices: [cmu, handover, react_stir, table_set]
 
   models: ['OnlyFineTuned', 'Marginal', 'Marginal-2Hist', 'InteRACT']

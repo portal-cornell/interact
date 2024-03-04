@@ -7,7 +7,6 @@ view_npy.py
 amass/*
 *body_models*
 *.bag
-*.txt
 logs*
 finetuned_HH_checkpoints/
 trained_HH_checkpoints/
