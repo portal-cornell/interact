@@ -167,132 +167,15 @@
     </div>
   </section>
 
-  <section class="hero teaser">
-    <div class="container is-max-desktop">
-      <div class="hero-body">
-        <img src="./static/images/interact_intro.png" class="interpolation-image"
-          alt="Collaborative Manipulation Tasks" />
+  <section class="hero teaser" width="50%">
+    <div class="container is-max-desktop" width="50%">
+      <!-- Reduce width of image while keeping centered in box -->
+      <div class="hero-body" width="50%">
         <h2 class="subtitle has-text-centered">
-          Our framework <span class="dnerf">Interact</span>, predicts human intent conditioned on future robot actions
+          <span class="dnerf">Interact</span>, predicts human intent conditioned on future robot actions
           for collaborative manipulation.
         </h2>
-      </div>
-    </div>
-  </section>
-
-
-  <section class="hero is-light is-small">
-    <div class="hero-body">
-      <div class="container">
-        <div id="results-carousel" class="carousel results-carousel">
-          <div class="item item-steve">
-            <div class="video-container">
-              <video poster="" id="steve" controls muted playsinline>
-                <source src="./static/videos/check.mp4" type="video/mp4">
-              </video>
-            </div>
-            <div class="caption">Reactive Stirring</div>
-          </div>
-          <div class="item item-chair-tp">
-            <div class="video-container">
-              <video poster="" id="chair-tp" controls muted playsinline>
-                <source src="./static/videos/tableset_lowerres.mp4" type="video/mp4">
-              </video>
-            </div>
-            <div class="caption">Table Setting</div>
-          </div>
-          <div class="item item-shiba">
-            <div class="video-container">
-              <video poster="" id="shiba" controls muted playsinline>
-                <source src="./static/videos/handovergif_lowerres.mp4" type="video/mp4">
-              </video>
-            </div>
-            <div class="caption">Object Handover</div>
-          </div>
-          <!-- <div class="item item-steve extra">
-            <div class="video-container">
-              <video poster="" id="steve" controls muted playsinline>
-                <source src="./static/videos/stirring_loweres.mp4"
-                        type="video/mp4">
-              </video>
-            </div>
-            <div class="caption">Reactive Stirring</div>
-          </div> -->
-          <!-- <div class="item item-chair-tp extra">
-            <div class="video-container">
-              <video poster="" id="chair-tp" controls muted playsinline>
-                <source src="./static/videos/tableset_lowerres.mp4"
-                        type="video/mp4">
-              </video>
-            </div>
-            <div class="caption">Table Setting</div>
-          </div> -->
-          <!-- <div class="item item-shiba extra">
-            <div class="video-container">
-              <video poster="" id="shiba" controls muted playsinline>
-                <source src="./static/videos/handover_lowerres.mp4"
-                        type="video/mp4">
-              </video>
-            </div>
-            <div class="caption">Object Handover</div>
-          </div> -->
-          <!-- <div class="item item-fullbody">
-            <video poster="" id="fullbody" autoplay controls muted loop playsinline height="100%">
-              <source src="./static/videos/fullbody.mp4"
-                      type="video/mp4">
-            </video>
-          </div>
-          <div class="item item-blueshirt">
-            <video poster="" id="blueshirt" autoplay controls muted loop playsinline height="100%">
-              <source src="./static/videos/blueshirt.mp4"
-                      type="video/mp4">
-            </video>
-          </div>
-          <div class="item item-mask">
-            <video poster="" id="mask" autoplay controls muted loop playsinline height="100%">
-              <source src="./static/videos/mask.mp4"
-                      type="video/mp4">
-            </video>
-          </div>
-          <div class="item item-coffee">
-            <video poster="" id="coffee" autoplay controls muted loop playsinline height="100%">
-              <source src="./static/videos/coffee.mp4"
-                      type="video/mp4">
-            </video>
-          </div>
-          <div class="item item-toby">
-            <video poster="" id="toby" autoplay controls muted loop playsinline height="100%">
-              <source src="./static/videos/toby2.mp4"
-                      type="video/mp4">
-            </video>
-          </div> -->
-          <script>
-            const videos = document.querySelectorAll('video');
-            let currentVideoIndex = 0;
-
-            // Play the first video
-            videos[currentVideoIndex].play();
-
-            videos[currentVideoIndex].addEventListener('ended', playNextVideo);
-
-            function playNextVideo() {
-              // Pause the current video
-              videos[currentVideoIndex].pause();
-
-              // Increment the current video index
-              currentVideoIndex++;
-              currentVideoIndex = currentVideoIndex % 3;
-
-              // Check if there's a next video to play
-              if (currentVideoIndex < videos.length) {
-                videos[currentVideoIndex].play();
-                videos[currentVideoIndex].addEventListener('ended', playNextVideo);
-              }
-            }
-          </script>
-
-        </div>
-
+        <img src="./static/images/interact_intro.png" alt="Collaborative Manipulation Tasks" class = "center" />
       </div>
     </div>
   </section>
@@ -346,9 +229,9 @@
       <!-- Paper video. -->
       <div class="columns is-centered has-text-centered">
         <div class="column is-four-fifths">
-          <h2 class="title is-3">Explainer Video (1 min)</h2>
+          <h2 class="title is-3">Explainer Video (3 min)</h2>
           <div class="publication-video">
-            <iframe src="./static/videos/Spotlight.mp4" frameborder="0" allow="encrypted-media"
+            <iframe src="./resources/ICRA24_3345_VI_i.mp4" frameborder="0" allow="encrypted-media"
               allowfullscreen></iframe>
           </div>
         </div>
@@ -364,36 +247,15 @@
       <div class="columns is-centered has-text-centered">
         <div class="column is-four-fifths">
           <!-- <h2 class="title is-3">ManiCast</h2> -->
-          <h3 class="title is-3">Forecasting Objective for Cost-Aware Planning [TO CHANGE]</h3>
-          <div class="publication-video">
-            <img src="./static/images/forecasting_loss.jpg">
-            <div class="content">
-              <p>
-                Optimizing the above objective directly is challenging since the cost function has non-differentiable
-                components. We approximate this objective and introduce cost-awareness with two different strategies.
-              </p>
-            </div>
-            <div class="strategy">
-              <div class="strategy-section">
-                <b>Strategy #1: Importance Sampling.</b>
-                <p>Identify "transitions" when the human comes into the robot's workspace and upsampling these regions
-                  in our dataset.</p>
-              </div>
-              <div class="strategy-section">
-                <b>Strategy #2: Dimension Weighting.</b>
-                <p>The planning cost is sensitive to forecasting errors along certain dimensions of the human pose, so
-                  we upweight them.</p>
-              </div>
-            </div>
-          </div>
 
-          <h3 class="title is-3">InteRACT uses an alignment loss to align learned human and robot embeddings for
-            human-robot transfer.</h3>
+          <h3 class="title is-3">Aligning Human and Robot Representations</h3>
+          <!-- <p class="title is-size-5" align="left">InteRACT uses an alignment loss to align learned human and robot embeddings for -->
+            <!-- human-robot transfer.</p> -->
           <div class="interpolation-image">
             <img src="./static/images/architecture.jpg">
-            <p>
-              Overview of our framework <span class="dnerf">InteRACT</span>,
-              which predicts <b>human intent conditioned on future robot actions</b> for <b>collaborative
+            <br><br>
+            <p align="left">
+              Overview of our framework InteRACT,which predicts <b>human intent conditioned on future robot actions</b> for <b>collaborative
                 manipulation</b> tasks. At train time, we first pre-train a conditional intent prediction model on
               human-human interaction data combining publicly available datasets and task specific datasets that we
               collect. We then fine-tune this model on a small scale human-robot dataset where we predict human intent
