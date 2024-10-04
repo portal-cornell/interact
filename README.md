@@ -57,7 +57,7 @@ Follow these steps to install `InteRACT`:
 
   ```
 
-3. Download the data (TODO)
+3. Download the data from this link [Data](https://cornell.app.box.com/s/jb0wau30dqotcjsak78ks64ea1o88yan)
 
 
 ## Training
