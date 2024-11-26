@@ -67,7 +67,7 @@ def main(cfg: DictConfig) -> None:
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     selected_model = cfg.selected_model
-    model_config = cfg.models[selected_model]  
+    model_config = cfg.hh_models[selected_model]  
 
     ONE_HIST = model_config.one_hist
     CONDITIONAL = model_config.conditional_forecaster

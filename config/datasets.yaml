@@ -1,14 +1,13 @@
-base_dev_dir: '/share/portal/pd337/interact'
+base_dev_dir: '/share/portal/kk837/interact'
 
-data_dir: '${base_dev_dir}/interact/data'
+data_dir: '${base_dev_dir}/data'
 
 cmu_mocap: '${data_dir}/cmu_mocap'
 comad: '${data_dir}/comad_data'
-comad_hr: '${data_dir}/comad_hr'
+comad_hr: '${data_dir}/comad_data'
 synthetic_amass: '${data_dir}/synthetic_amass'
-comad_transitions: '${comad}/test_transition.json'
 
-mapping_dir: '${data_dir}/mapping'
+mapping_dir: '${base_dev_dir}/mapping'
 
 mocap_mapping: '${mapping_dir}/mocap_mapping.json'
 comad_mapping: '${mapping_dir}/comad_mapping.json'
