@@ -36,11 +36,9 @@ Follow these steps to install `InteRACT`:
   |     ├── HH_checkpoints
   |     ├── HR_checkpoints
   |   ├── data
-  |     ├── cmu_mocap
   |     ├── comad_data
-  |     ├── comad_hr
-  |     ├── mapping
-  |     ├── synthetic_amass
+  |     ├── amass
+  |     ├── cmu_mocap (optional)     
   |   ├── model
   |     ├── model architecture files...
   |   ├── utils
@@ -50,6 +48,10 @@ Follow these steps to install `InteRACT`:
   |     ├── pretrain_intent_forecaster.py  <- pretraining on H-H 
   |     |── finetune_intent_forecaster.py  <- finetuning on H-H
   |     |── hr_transfer.py                 <- transferring to H-R
+  |   ├── mapping
+  |     ├── files for joint mapping...
+  |   ├── body_models
+  |     ├── SMPL skeleton file (used for AMASS data)
   |
   ├── environment.yml
   ├── README.md
@@ -57,7 +59,24 @@ Follow these steps to install `InteRACT`:
 
   ```
 
-3. Download the data from this link [Data](https://cornell.app.box.com/s/jb0wau30dqotcjsak78ks64ea1o88yan)
+## Dataset Installation and Preprocessing
+
+### AMASS 
+Download datasets listed in ```configs/synthetic_amass.yaml``` from the official [AMASS website](https://amass.is.tue.mpg.de/).
+
+The AMASS dataset contains data of single human motion. Preprocess this data to create synthetic two-human data:
+```
+python scripts/create_synthetic_amass.data.py
+```
+Update the config file ```configs/synthetic_amass.yaml``` before running this script.
+
+### CoMaD
+Download the data from this link [Data](https://cornell.app.box.com/s/jb0wau30dqotcjsak78ks64ea1o88yan) into the correct data directory.
+
+You can also wget the .zip file using:
+```
+wget https://cornell.box.com/shared/static/6ss0mfojdof8q1z9ru7go58rwxqbnel5.zip -O comad_data.zip
+```
 
 
 ## Training
