@@ -1,0 +1,11 @@
+base_dev_dir: '/share/portal/kk837/interact/'
+
+amass_dir: '${base_dev_dir}/data/amass/'
+body_models_dir: '${base_dev_dir}/body_models/smpl_skeleton.npz'
+
+# original splits below - can change to your own splits
+train_datasets: ['CMU', 'MPI_Limits', 'Eyes_Japan_Dataset', 'KIT', 'EKUT', 'ACCAD']
+val_datasets: ['SFU']
+test_datasets: ['BioMotionLab_NTroje']
+
+save_dir: '${base_dev_dir}/data/synthetic_amass'

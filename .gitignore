@@ -5,7 +5,6 @@ all_asfamc
 comad_json/
 view_npy.py
 amass/*
-*body_models*
 *.bag
 logs*
 finetuned_HH_checkpoints/
