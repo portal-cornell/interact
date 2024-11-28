@@ -62,7 +62,7 @@ Follow these steps to install `InteRACT`:
 ## Dataset Installation and Preprocessing
 
 ### AMASS 
-Download datasets listed in ```configs/synthetic_amass.yaml``` from the official [AMASS website](https://amass.is.tue.mpg.de/).
+Download datasets listed in ```configs/synthetic_amass.yaml``` from the official [AMASS website](https://amass.is.tue.mpg.de/). Use any of the SMPL-X or SMPL-H links to download each dataset.
 
 The AMASS dataset contains data of single human motion. Preprocess this data to create synthetic two-human data:
 ```
