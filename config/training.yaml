@@ -26,8 +26,8 @@ hh_models:
     _target_: interact.model.Models.IntentInformedForecaster
     one_hist: false
     conditional_forecaster: true
-    bob_joints_list: [0, 1, 2, 3, 4, 5, 6, 7, 8]
-    bob_joints_num: 9
+    bob_joints_list: [7,8]
+    bob_joints_num: 2
     d_word_vec: 128
     d_model: 128
     d_inner: 1024
@@ -38,8 +38,8 @@ hh_models:
 
   Marginal:
     _target_: interact.model.Models.IntentInformedForecaster
-    bob_joints_list: [0, 1, 2, 3, 4, 5, 6, 7, 8]
-    bob_joints_num: 9
+    bob_joints_list: [7,8]
+    bob_joints_num: 2
     d_word_vec: 128
     d_model: 128
     d_inner: 1024
@@ -53,8 +53,8 @@ hh_models:
   Marginal-2Hist:
     _target_: interact.model.Models.IntentInformedForecaster
     one_hist: false
-    bob_joints_list: [0, 1, 2, 3, 4, 5, 6, 7, 8]
-    bob_joints_num: 9
+    bob_joints_list: [7,8]
+    bob_joints_num: 2
     d_word_vec: 128
     d_model: 128
     d_inner: 1024
@@ -66,8 +66,8 @@ hh_models:
 
   OnlyFineTuned:
     _target_: interact.model.Models.IntentInformedForecaster
-    bob_joints_list: [0, 1, 2, 3, 4, 5, 6, 7, 8]
-    bob_joints_num: 9
+    bob_joints_list: [7,8]
+    bob_joints_num: 2
     d_word_vec: 128
     d_model: 128
     d_inner: 1024
@@ -83,8 +83,8 @@ hr_models:
     _target_: interact.model.Models.IntentInformedHRForecaster
     one_hist: false
     conditional_forecaster: true
-    bob_joints_list: [0, 1, 2, 3, 4, 5, 6, 7, 8]
-    bob_joints_num: 9
+    bob_joints_list: [0, 1]
+    bob_joints_num: 2
     d_word_vec: 128
     d_model: 128
     d_inner: 1024
@@ -99,8 +99,8 @@ hr_models:
     _target_: interact.model.Models.IntentInformedHRForecaster
     one_hist: false
     conditional_forecaster: true
-    bob_joints_list: [0, 1, 2, 3, 4, 5, 6, 7, 8]
-    bob_joints_num: 9
+    bob_joints_list: [0, 1]
+    bob_joints_num: 2
     d_word_vec: 128
     d_model: 128
     d_inner: 1024
@@ -116,8 +116,8 @@ hr_models:
     _target_: interact.model.Models.IntentInformedHRForecaster
     one_hist: true
     conditional_forecaster: false
-    bob_joints_list: [0, 1, 2, 3, 4, 5, 6, 7, 8]
-    bob_joints_num: 9
+    bob_joints_list: [0, 1]
+    bob_joints_num: 2
     d_word_vec: 128
     d_model: 128
     d_inner: 1024
@@ -132,8 +132,8 @@ hr_models:
     _target_: interact.model.Models.IntentInformedHRForecaster
     one_hist: true
     conditional_forecaster: false
-    bob_joints_list: [0, 1, 2, 3, 4, 5, 6, 7, 8]
-    bob_joints_num: 9
+    bob_joints_list: [0, 1]
+    bob_joints_num: 2
     d_word_vec: 128
     d_model: 128
     d_inner: 1024

@@ -10,12 +10,10 @@ class CoMaD_HR(Dataset):
 
     def __init__(
             self, 
-            # data_dir = './interact/data/new_hr', 
             input_n = 15,
             output_n = 15,
-            sample_rate = 15,
+            sample_rate = 120,
             output_rate = 15,
-            # mapping_json = "./interact/data/mapping/comad_mapping.json", 
             split='train',
             subtask=None
             ):
@@ -37,52 +35,61 @@ class CoMaD_HR(Dataset):
         self.subtask = subtask
 
         ### harcoded joints order
-        self.joint_used = np.array([0, 1, 2, 3, 4, 5, 6, 9, 10])
+        self.alice_joint_used = np.array([0, 1, 2, 3, 4, 5, 6, 9, 10])
+        self.bob_joints_used = np.array([0, 1])
+        self.robot_joints_used = np.array([10, 11])
         self.add_comad_dataset()
 
     def add_comad_dataset(self):
-        for episode in os.listdir(f'{self.data_dir}/{self.split}_hr'):
-            if self.subtask and self.subtask not in episode:
-                continue
-            print(f'Episode: {self.data_dir}/{self.split}_hr/{episode}')
-            try:
-                json_data = read_json(f'{self.data_dir}/{self.split}_hr/{episode}')
-            except:
-                continue
-
-            downsample_rate = self.sample_rate // self.output_rate
-            # TODO: Change this to use metadata to figure out who Alice and Bob are
-            alice_tensor = get_pose_history(json_data, 
-                            "Kushal")[::downsample_rate,self.joint_used]
-            bob_tensor = get_pose_history(json_data, 
-                            "Atiksh")[::downsample_rate,self.joint_used]
-            robot_tensor = get_pose_history(json_data, 
-                            "Robot")[::downsample_rate]
-            def fix_orientation(tensor):
-                tensor[:,:,[0,1,2]] = tensor[:,:,[0,2,1]]
-                tensor[:,:,0] *= -1
-                return tensor
-
-            alice_tensor = fix_orientation(alice_tensor)
-            bob_tensor = fix_orientation(bob_tensor)
-            robot_tensor = fix_orientation(robot_tensor)
-
-            # chop the tensor into a bunch of slices of size sequence_len
-            for start_frame in range(alice_tensor.shape[0]-self.sequence_len):
-                end_frame = start_frame + self.sequence_len
-                if missing_data(alice_tensor[start_frame:end_frame]) or \
-                    missing_data(bob_tensor[start_frame:end_frame]) or \
-                    missing_data(robot_tensor[start_frame:end_frame]):
-                    # print("MISSING DATA")
+        for task in os.listdir(f'{self.data_dir}/{self.split}'):
+            for episode in os.listdir(f'{self.data_dir}/{self.split}/{task}/HR'):
+                print(f'Episode: {self.data_dir}/{self.split}/{task}/HR/{episode}')
+                try:
+                    json_data = read_json(f'{self.data_dir}/{self.split}/{task}/HR/{episode}/data.json')
+                except:
                     continue
-                self.alice_input.append(alice_tensor[start_frame:start_frame+self.input_n])
-                self.alice_output.append(alice_tensor[start_frame+self.input_n:end_frame])
+                metadata = read_json(f'{self.data_dir}/{self.split}/{task}/HR/{episode}/metadata.json')
+                # breakpoint()
+                alice_name, bob_name, robot_name = json_data.keys()    
+                downsample_rate = self.sample_rate // self.output_rate
+                # TODO: Change this to use metadata to figure out who Alice and Bob are
+                alice_tensor = get_pose_history(json_data, 
+                                alice_name)[::downsample_rate,self.alice_joint_used]
+                bob_tensor = get_pose_history(json_data, 
+                                bob_name)[::downsample_rate, self.bob_joints_used]
+                try: 
+                    robot_tensor = get_pose_history(json_data, 
+                                robot_name)[::downsample_rate, self.robot_joints_used]
+                except:
+                    print("Robot not found")
+                    continue
+                # robot_tensor = get_pose_history(json_data, 
+                #                 robot_name)[::downsample_rate, self.robot_joints_used]
+                def fix_orientation(tensor):
+                    tensor[:,:,[0,1,2]] = tensor[:,:,[0,2,1]]
+                    tensor[:,:,0] *= -1
+                    return tensor
 
-                self.bob_input.append(bob_tensor[start_frame:start_frame+self.input_n])
-                self.bob_output.append(bob_tensor[start_frame+self.input_n:end_frame])
+                alice_tensor = fix_orientation(alice_tensor)
+                bob_tensor = fix_orientation(bob_tensor)
+                robot_tensor = fix_orientation(robot_tensor)
 
-                self.robot_input.append(robot_tensor[start_frame:start_frame+self.input_n])
-                self.robot_output.append(robot_tensor[start_frame+self.input_n:end_frame])
+                # chop the tensor into a bunch of slices of size sequence_len
+                for start_frame in range(alice_tensor.shape[0]-self.sequence_len):
+                    end_frame = start_frame + self.sequence_len
+                    if missing_data(alice_tensor[start_frame:end_frame]) or \
+                        missing_data(bob_tensor[start_frame:end_frame]) or \
+                        missing_data(robot_tensor[start_frame:end_frame]):
+                        # print("MISSING DATA")
+                        continue
+                    self.alice_input.append(alice_tensor[start_frame:start_frame+self.input_n])
+                    self.alice_output.append(alice_tensor[start_frame+self.input_n:end_frame])
+
+                    self.bob_input.append(bob_tensor[start_frame:start_frame+self.input_n])
+                    self.bob_output.append(bob_tensor[start_frame+self.input_n:end_frame])
+
+                    self.robot_input.append(robot_tensor[start_frame:start_frame+self.input_n])
+                    self.robot_output.append(robot_tensor[start_frame+self.input_n:end_frame])
         print(len(self.alice_input))
 
     def __len__(self):
@@ -93,4 +100,4 @@ class CoMaD_HR(Dataset):
         return self.alice_input[idx], self.alice_output[idx], self.bob_input[idx], self.bob_output[idx], self.robot_input[idx], self.robot_output[idx]
 
 if __name__ == "__main__":
-    dataset = CoMaD()
+    dataset = CoMaD_HR()

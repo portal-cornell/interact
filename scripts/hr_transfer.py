@@ -122,9 +122,12 @@ def main(cfg: DictConfig):
         for j, batch in enumerate(train_dataloader):
             offset = batch[0].reshape(batch[0].shape[0], 
                                         batch[0].shape[1], -1)[:, -1].unsqueeze(1)
-            alice_hist, alice_fut, bob_hist, bob_fut = [(batch[i].reshape(batch[i].shape[0], 
-                                        batch[i].shape[1], -1) - offset).to(device) for i in range(4)]
-            robot_hist, robot_fut = [(batch[i].reshape(batch[i].shape[0], batch[i].shape[1], -1) - offset[:, :, -6:]).to(device) for i in range(4,6)]
+            alice_hist, alice_fut = [(batch[i].reshape(batch[i].shape[0], 
+                                        batch[i].shape[1], -1) - offset).to(device) for i in range(2)]
+            bob_hist, bob_fut = [(batch[i].reshape(batch[i].shape[0], 
+                                        batch[i].shape[1], -1) - offset[:, :, -6:]).to(device) for i in range(2,4)]
+            robot_hist, robot_fut = [(batch[i].reshape(batch[i].shape[0], 
+                                        batch[i].shape[1], -1) - offset[:, :, -6:]).to(device) for i in range(4,6)]
             alice_forecasts, alignment_loss = model(alice_hist, bob_hist, bob_fut, robot_hist, robot_fut)
             loss = mpjpe_loss(alice_forecasts, alice_fut) 
 

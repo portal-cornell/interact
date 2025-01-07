@@ -73,9 +73,11 @@ Update the config file ```configs/synthetic_amass.yaml``` before running this sc
 ### CoMaD
 Download the data from this link [Data](https://cornell.app.box.com/s/jb0wau30dqotcjsak78ks64ea1o88yan) into the correct data directory.
 
-You can also wget the .zip file using:
+You can download the .zip file and extract the data using the following terminal commands:
 ```
 wget https://cornell.box.com/shared/static/6ss0mfojdof8q1z9ru7go58rwxqbnel5.zip -O comad_data.zip
+unzip comad_data.zip -d data/comad_data/
+rm comad_data.zip
 ```
 
 
