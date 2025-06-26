@@ -26,7 +26,8 @@ Follow these steps to install `InteRACT`:
 
 1. Set the `base_dev_dir` to your working directory in all of the config files
 
-2. Create a new directory for data under interact so that the repo has the following structure:
+2. **Create the data directory**: Create a new directory called `"data"` under interact so that the repo has the following structure:
+
   ### Repo Structure
   ```
   ├── config
@@ -57,6 +58,7 @@ Follow these steps to install `InteRACT`:
   ├── README.md
   ├── setup.py
 
+
   ```
 
 ## Dataset Installation and Preprocessing
@@ -68,7 +70,7 @@ The AMASS dataset contains data of single human motion. Preprocess this data to 
 ```
 python scripts/create_synthetic_amass.data.py
 ```
-Update the config file ```configs/synthetic_amass.yaml``` before running this script.
+**Note**: Update the config file ```configs/synthetic_amass.yaml``` with the specific datasets you have in your data directory before running this script.
 
 ### CoMaD
 Download the data from this link [Data](https://cornell.app.box.com/s/jb0wau30dqotcjsak78ks64ea1o88yan) into the correct data directory.

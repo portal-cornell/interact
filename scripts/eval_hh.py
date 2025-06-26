@@ -17,9 +17,9 @@ import hydra
 def main(cfg):
     dataset_map = {
         'cmu': lambda: CMU_Mocap(split='test'),
-        'handover': lambda: CoMaD(split='test',subtask='handover',transitions=True),
-        'react_stir': lambda: CoMaD(split='test',subtask='react_stir',transitions=True),
-        'table_set': lambda: CoMaD(split='test',subtask='table_set')
+        'handover': lambda: CoMaD(split='test'),
+        'react_stir': lambda: CoMaD(split='test'),
+        'table_set': lambda: CoMaD(split='test')
     }
 
     models = cfg.hh_eval.models
@@ -34,7 +34,7 @@ def main(cfg):
         shuffle = False,
         num_workers = 0)
 
-    model_info_cfg = hydra.compose(config_name="training", overrides=[])
+    model_info_cfg = hydra.compose(config_name="eval_checkpoints", overrides=[])
     
     for model_path in models:
         model_config = model_info_cfg.hh_models[model_path]

@@ -14,12 +14,13 @@ import hydra
 @hydra.main(config_path="../config", config_name="eval")
 def main(cfg):
     dataset_map = {
-        'cabinet': lambda: CoMaD_HR(split='test',subtask='cabinet'),
-        'take': lambda: CoMaD_HR(split='test',subtask='take'),
-        'cart': lambda: CoMaD_HR(split='test',subtask='cart'),
+        'cabinet': lambda: CoMaD_HR(split='test'),
+        'take': lambda: CoMaD_HR(split='test'),
+        'cart': lambda: CoMaD_HR(split='test'),
     }
 
     models = cfg.hr_eval.models
+    print(models)
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     model_results_dict = {}
@@ -31,7 +32,7 @@ def main(cfg):
         shuffle = False,
         num_workers = 0)
 
-    model_info_cfg = hydra.compose(config_name="training", overrides=[])
+    model_info_cfg = hydra.compose(config_name="eval_checkpoints", overrides=[])
 
     for model_path in models:
         ### Change model to match ConditionalForecaster
@@ -60,11 +61,11 @@ def main(cfg):
                 offset = batch[0].reshape(batch[0].shape[0], 
                                             batch[0].shape[1], -1)[:, -1].unsqueeze(1)
                 alice_hist, alice_fut, bob_hist, bob_fut = [(batch[i].reshape(batch[i].shape[0], 
-                                            batch[i].shape[1], -1) - offset).to('cuda') for i in range(4)]
+                                            batch[i].shape[1], -1) - offset[:, :, :batch[i].shape[2]*3]).to('cuda') for i in range(4)]
                 robot_hist, robot_fut = [(batch[i].reshape(batch[i].shape[0], batch[i].shape[1], -1) - offset[:, :, -6:]).to('cuda') for i in range(4,6)]
                 batch_dim = alice_hist.shape[0]
                 n += batch_dim
-                alice_forecasts, alignment_loss = model(alice_hist, bob_hist, bob_fut, robot_hist, robot_fut)
+                alice_forecasts, alignment_loss = model.forward_inference(alice_hist, bob_hist, bob_fut, robot_hist, robot_fut)
             
                 ### Compute the different losses to report
                 loss = mpjpe_loss(alice_forecasts, alice_fut)
@@ -98,7 +99,7 @@ def main(cfg):
             'wrist_ade': [wrist_ade_mean, wrist_ade_std],
             'wrist_fde': [wrist_fde_mean, wrist_fde_std],
         }
-
+        # breakpoint()
         # with open(f'./metrics/{args.eval_data}_{model_path}.npy', 'wb') as f:
         #     np.save(f, wrist_fde_mean)
         #     np.save(f, wrist_fde_std)

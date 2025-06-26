@@ -252,6 +252,53 @@ class IntentInformedHRForecaster(nn.Module):
 
         return alice_forecasts, align_loss
     
+    def forward_inference(self, alice_hist, bob_hist, bob_future, robot_hist, robot_future, add_spe=True):
+        ### Intent informed forecasting only cares about Bob's position at final timestep
+        robot_future = robot_future[:, -1:]
+        
+        ### local history encoding
+        alice_displacement = alice_hist[:,1:alice_hist.shape[1],:]-alice_hist[:,:alice_hist.shape[1]-1,:]                 
+        alice_displacement_dct = dct.dct(alice_displacement)
+        alice_local_enc = self.hh.alice_local_hist_encoder(alice_displacement_dct)
+        alice_local_output, *_ = self.hh.encoder(alice_local_enc, 1, None)
+
+        ### global history encoding
+        alice_global_enc = self.hh.alice_global_hist_encoder(alice_hist)
+        if not self.hh.one_hist:
+            robot_global_enc = self.robot_global_hist_encoder(robot_hist)
+            global_enc = torch.cat([alice_global_enc, robot_global_enc],dim=1)
+        else:
+            global_enc = alice_global_enc
+        global_output, *_ = self.hh.encoder_global(global_enc,
+                    1 if self.hh.one_hist else 2, 
+                    src_mask = None, 
+                    global_feature=True)
+
+        robot_cond_future_enc = self.robot_global_future_encoder(robot_future)
+
+        spe = 0
+        if add_spe:
+            alice_spe = torch.norm(alice_hist-alice_hist[:, -1].unsqueeze(1), dim=-1)
+            robot_spe = torch.norm(robot_hist-alice_hist[:, -1, self.robot_joint_indices].unsqueeze(1), dim=-1)
+            spe = torch.exp(-torch.cat([alice_spe, robot_spe] if not self.hh.one_hist else [alice_spe], dim=1)).unsqueeze(2)
+
+        encoder_output = torch.cat([alice_local_output, global_output+spe], dim=1)
+
+        dec_output, dec_attention, *_ = self.hh.decoder(robot_cond_future_enc, None, encoder_output, None)
+        dec_output = self.hh.decoder_linear(dec_output)
+        dec_output = torch.permute(dec_output, (0,2,1)) # (batch size, 1, d_model) -> (batch size, d_model, 1)
+        dec_output = self.hh.linear_proj_to_forecast(dec_output) # (batch size, d_model, 1) -> (batch size, d_model, 15)
+        dec_output = torch.permute(dec_output, (0,2,1)) # (batch size, d_model, 15) -> (batch size, 15, d_model)
+        alice_forecasts_dct = self.hh.forecast_head(dec_output)
+        alice_forecasts_displacments = dct.idct(alice_forecasts_dct)
+
+        alice_forecasts = torch.cumsum(alice_forecasts_displacments, dim=1)
+
+        align_loss = 0
+
+        return alice_forecasts, align_loss
+
+    
 class IntentInformedForecaster(nn.Module):
     def __init__(
             self, src_pad_idx=1, trg_pad_idx=1,

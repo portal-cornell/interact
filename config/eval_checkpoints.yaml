@@ -1,0 +1,177 @@
+base_dev_dir: '/share/portal/kk837/interact'
+
+
+Training:
+  epochs: 30
+  batch_size: 256
+  log_dir: "${base_dev_dir}/logs/logs_default"
+  lr_pred: 0.0003
+  lr_ft: 0.0001
+  weight_decay: 0.00001
+  align_weight: 0.1
+  scheduler:
+    milestones: [15, 25, 35, 40]
+    gamma: 0.1
+  pretraining:
+    output_dir: '${base_dev_dir}/interact/checkpoints/trained_HH_checkpoints'
+  finetuning:
+    output_dir: '${base_dev_dir}/interact/checkpoints/finetuned_HH_checkpoints'
+  hr_training:
+    output_dir: '${base_dev_dir}/interact/checkpoints/trained_HR_checkpoints'
+
+
+
+hh_models:
+  InteRACT: 
+    _target_: interact.model.Models.IntentInformedForecaster
+    one_hist: false
+    conditional_forecaster: true
+    bob_joints_list: [0,1, 2, 3, 4, 5, 6, 7, 8]
+    bob_joints_num: 9
+    # when evaluating models wiht only 2 joints, 
+    # set bob_joints_list to [7, 8]
+    # set bob_joints_num to 2
+    d_word_vec: 128
+    d_model: 128
+    d_inner: 1024
+    n_layers: 3
+    n_head: 8
+    d_k: 64
+    d_v: 64
+
+  Marginal:
+    _target_: interact.model.Models.IntentInformedForecaster
+    bob_joints_list: [0,1, 2, 3, 4, 5, 6, 7, 8]
+    bob_joints_num: 9
+    # when evaluating models wiht only 2 joints, 
+    # set bob_joints_list to [7, 8]
+    # set bob_joints_num to 2
+    d_word_vec: 128
+    d_model: 128
+    d_inner: 1024
+    n_layers: 3
+    n_head: 8
+    d_k: 64
+    d_v: 64
+    one_hist: true
+    conditional_forecaster: false
+    
+  Marginal-2Hist:
+    _target_: interact.model.Models.IntentInformedForecaster
+    one_hist: false
+    bob_joints_list: [0,1, 2, 3, 4, 5, 6, 7, 8]
+    bob_joints_num: 9
+    # when evaluating models wiht only 2 joints, 
+    # set bob_joints_list to [7, 8]
+    # set bob_joints_num to 2
+    d_word_vec: 128
+    d_model: 128
+    d_inner: 1024
+    n_layers: 3
+    n_head: 8
+    d_k: 64
+    d_v: 64
+    conditional_forecaster: false
+
+  OnlyFineTuned:
+    _target_: interact.model.Models.IntentInformedForecaster
+    bob_joints_list: [0,1, 2, 3, 4, 5, 6, 7, 8]
+    bob_joints_num: 9
+    # when evaluating models wiht only 2 joints, 
+    # set bob_joints_list to [7, 8]
+    # set bob_joints_num to 2
+    d_word_vec: 128
+    d_model: 128
+    d_inner: 1024
+    n_layers: 3
+    n_head: 8
+    d_k: 64
+    d_v: 64
+    one_hist: true
+    conditional_forecaster: false
+
+hr_models: 
+  InteRACT-Align:
+    _target_: interact.model.Models.IntentInformedHRForecaster
+    one_hist: false
+    conditional_forecaster: true
+    # when evaluating models wiht 9 joints, 
+    bob_joints_list: [0,1, 2, 3, 4, 5, 6, 7, 8]
+    bob_joints_num: 9
+    # when evaluating models wiht only 2 joints, 
+    # bob_joints_list: [7, 8]
+    # bob_joints_num: 2
+    d_word_vec: 128
+    d_model: 128
+    d_inner: 1024
+    n_layers: 3
+    n_head: 8
+    d_k: 64
+    d_v: 64
+    robot_joints_list: [6, 8]
+    align_rep: true
+
+  InteRACT:
+    _target_: interact.model.Models.IntentInformedHRForecaster
+    one_hist: false
+    conditional_forecaster: true
+    # when evaluating models wiht 9 joints, 
+    bob_joints_list: [0,1, 2, 3, 4, 5, 6, 7, 8]
+    bob_joints_num: 9
+    # when evaluating models wiht only 2 joints, 
+    # bob_joints_list: [7, 8]
+    # bob_joints_num: 2
+    d_word_vec: 128
+    d_model: 128
+    d_inner: 1024
+    n_layers: 3
+    n_head: 8
+    d_k: 64
+    d_v: 64
+    robot_joints_list: [6, 8]
+    robot_joints_num: 2
+    align_rep: false
+
+  Marginal:
+    _target_: interact.model.Models.IntentInformedHRForecaster
+    one_hist: true
+    conditional_forecaster: false
+    # when evaluating models wiht 9 joints, 
+    bob_joints_list: [0,1, 2, 3, 4, 5, 6, 7, 8]
+    bob_joints_num: 9
+    # when evaluating models wiht only 2 joints, 
+    # bob_joints_list: [7, 8]
+    # bob_joints_num: 2
+    d_word_vec: 128
+    d_model: 128
+    d_inner: 1024
+    n_layers: 3
+    n_head: 8
+    d_k: 64
+    d_v: 64
+    robot_joints_list: [6, 8]
+    align_rep: false
+
+  OnlyFineTuned:
+    _target_: interact.model.Models.IntentInformedHRForecaster
+    one_hist: true
+    conditional_forecaster: false
+    # when evaluating models wiht 9 joints, 
+    bob_joints_list: [0,1, 2, 3, 4, 5, 6, 7, 8]
+    bob_joints_num: 9
+    # when evaluating models wiht only 2 joints, 
+    # bob_joints_list: [7, 8]
+    # bob_joints_num: 2
+    d_word_vec: 128
+    d_model: 128
+    d_inner: 1024
+    n_layers: 3
+    n_head: 8
+    d_k: 64
+    d_v: 64
+    robot_joints_list: [6, 8]
+    align_rep: false
+
+# can override the selected models with command line args
+selected_model: 'InteRACT'
+selected_hr_model: 'InteRACT-Align'
